@@ -1,79 +1,93 @@
 from __future__ import annotations
 
-import json
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from validator import validate_csv
+from contract_auditor import audit_drift, save_audit
 
 
-class CsvValidatorApp(tk.Tk):
-    def __init__(self) -> None:
+class DataContractAuditApp(tk.Tk):
+    def __init__(self):
         super().__init__()
-        self.title("CSV Import Validator")
-        self.geometry("760x390")
-        self.minsize(680, 350)
-        self.input_var = tk.StringVar()
-        self.schema_var = tk.StringVar()
-        self.output_var = tk.StringVar(value=str(Path.home() / "Documents"))
-        self.status_var = tk.StringVar(value="CSVを選択してください。")
-        self._build()
+        self.title("Data Contract & Schema Drift Auditor")
+        self.geometry("900x580")
+        self.minsize(800, 500)
 
-    def _build(self) -> None:
+        self.baseline = tk.StringVar()
+        self.current = tk.StringVar()
+        self.keys = tk.StringVar()
+        self.output_dir = tk.StringVar(value=str(Path.cwd() / "data_contract_audit"))
+        self.status = tk.StringVar(value="基準ファイルと今回ファイルを選択してください。")
+
         root = ttk.Frame(self, padding=16)
         root.pack(fill="both", expand=True)
-        root.columnconfigure(1, weight=1)
+        ttk.Label(root, text="Data Contract & Schema Drift Auditor", font=("Segoe UI", 18, "bold")).pack(anchor="w")
+        ttk.Label(
+            root,
+            text="昨日と今日、旧エクスポートと新エクスポートなどを比較し、列・型・NULL率・分布・キー重複の変化を監査します。",
+            wraplength=840,
+        ).pack(anchor="w", pady=(4, 14))
 
-        self._row(root, 0, "CSV", self.input_var, self._pick_csv)
-        self._row(root, 1, "スキーマ(JSON・任意)", self.schema_var, self._pick_schema)
-        self._row(root, 2, "出力先", self.output_var, self._pick_output)
+        self._path_row(root, "Baseline", self.baseline, lambda: self._pick(self.baseline))
+        self._path_row(root, "Current", self.current, lambda: self._pick(self.current))
+        self._path_row(root, "出力先", self.output_dir, self._pick_output)
 
-        ttk.Label(root, text="スキーマなしでも文字コード・列数・数式候補などを検査できます。", wraplength=690).grid(
-            row=3, column=0, columnspan=3, sticky="w", pady=(12, 0)
-        )
-        ttk.Label(root, textvariable=self.status_var, wraplength=690).grid(
-            row=4, column=0, columnspan=3, sticky="w", pady=(14, 0)
-        )
-        ttk.Button(root, text="検査を実行", command=self._run).grid(row=5, column=0, columnspan=3, pady=18)
+        row = ttk.Frame(root)
+        row.pack(fill="x", pady=5)
+        ttk.Label(row, text="Key列", width=10).pack(side="left")
+        ttk.Entry(row, textvariable=self.keys).pack(side="left", fill="x", expand=True)
+        ttk.Label(row, text=" 例: customer_id,date").pack(side="left")
 
-    def _row(self, parent, row, label, variable, command) -> None:
-        ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=7)
-        ttk.Entry(parent, textvariable=variable).grid(row=row, column=1, sticky="ew", pady=7)
-        ttk.Button(parent, text="選択", command=command).grid(row=row, column=2, padx=(8, 0), pady=7)
+        ttk.Button(root, text="Schema Drift監査を実行", command=self.run_audit).pack(anchor="w", pady=(12, 8))
+        ttk.Label(root, textvariable=self.status, wraplength=840).pack(anchor="w", pady=(0, 10))
 
-    def _pick_csv(self) -> None:
-        value = filedialog.askopenfilename(filetypes=[("CSV", "*.csv")])
-        if value:
-            self.input_var.set(value)
+        self.tree = ttk.Treeview(root, columns=("severity", "code", "column", "message", "baseline", "current"), show="headings", height=15)
+        for key, title, width in [
+            ("severity", "重要度", 75), ("code", "種類", 190), ("column", "列", 140),
+            ("message", "内容", 300), ("baseline", "基準", 90), ("current", "今回", 90),
+        ]:
+            self.tree.heading(key, text=title)
+            self.tree.column(key, width=width, anchor="w")
+        self.tree.pack(fill="both", expand=True)
 
-    def _pick_schema(self) -> None:
-        value = filedialog.askopenfilename(filetypes=[("JSON", "*.json")])
-        if value:
-            self.schema_var.set(value)
+    def _path_row(self, parent, label, variable, command):
+        row = ttk.Frame(parent)
+        row.pack(fill="x", pady=5)
+        ttk.Label(row, text=label, width=10).pack(side="left")
+        ttk.Entry(row, textvariable=variable).pack(side="left", fill="x", expand=True, padx=(0, 8))
+        ttk.Button(row, text="選択", command=command).pack(side="left")
 
-    def _pick_output(self) -> None:
-        value = filedialog.askdirectory()
-        if value:
-            self.output_var.set(value)
+    def _pick(self, variable):
+        path = filedialog.askopenfilename(filetypes=[("CSV / Excel", "*.csv *.xlsx *.xlsm"), ("All", "*.*")])
+        if path:
+            variable.set(path)
 
-    def _run(self) -> None:
-        try:
-            schema = None
-            if self.schema_var.get().strip():
-                schema = json.loads(Path(self.schema_var.get()).read_text(encoding="utf-8"))
-            result = validate_csv(self.input_var.get(), self.output_var.get(), schema)
-            report = json.loads((result / "report.json").read_text(encoding="utf-8"))
-        except Exception as exc:
-            self.status_var.set(f"エラー: {exc}")
-            messagebox.showerror("検査エラー", str(exc))
+    def _pick_output(self):
+        path = filedialog.askdirectory()
+        if path:
+            self.output_dir.set(path)
+
+    def run_audit(self):
+        if not self.baseline.get() or not self.current.get():
+            messagebox.showwarning("入力不足", "BaselineとCurrentを選択してください。")
             return
-
-        self.status_var.set(
-            f"完了: エラー {report['error_count']} / 警告 {report['warning_count']} / {result}"
-        )
-        messagebox.showinfo("完了", self.status_var.get())
+        keys = [x.strip() for x in self.keys.get().split(",") if x.strip()]
+        try:
+            report = audit_drift(self.baseline.get(), self.current.get(), key_columns=keys)
+            out = save_audit(report, self.output_dir.get())
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+            for f in report["findings"][:1000]:
+                self.tree.insert("", "end", values=(
+                    f["severity"], f["code"], f["column"], f["message"], f.get("baseline", ""), f.get("current", ""),
+                ))
+            s = report["summary"]
+            self.status.set(f"完了: error={s['errors']} / warning={s['warnings']} / info={s['info']} / {out}")
+        except Exception as exc:
+            messagebox.showerror("監査失敗", str(exc))
+            self.status.set(f"失敗: {exc}")
 
 
 if __name__ == "__main__":
-    CsvValidatorApp().mainloop()
+    DataContractAuditApp().mainloop()
