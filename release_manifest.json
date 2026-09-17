@@ -1,0 +1,23 @@
+{
+  "product": "Data Contract & Schema Drift Auditor",
+  "version": "0.9.0-rc1",
+  "sales_release": false,
+  "release_stage": "desktop_validation_pending",
+  "supported_source_formats": ["csv", "xlsx", "xlsm"],
+  "code_gates": {
+    "non_destructive": true,
+    "contract_and_drift_separated": true,
+    "sha256_recorded": true,
+    "absolute_paths_omitted": true,
+    "regression_tests_present": true,
+    "windows_build_workflow_present": true
+  },
+  "desktop_blockers": [
+    "Windows 10/11 EXE smoke test",
+    "Japanese CSV encoding compatibility test",
+    "large-file performance test",
+    "type-inference false-positive review",
+    "SmartScreen/AV test",
+    "final distribution SHA256"
+  ]
+}
