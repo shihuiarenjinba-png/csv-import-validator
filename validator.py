@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import re
 from collections import Counter
@@ -9,8 +10,16 @@ from datetime import datetime
 from pathlib import Path
 
 ENCODINGS = ("utf-8-sig", "utf-8", "cp932", "utf-16")
-FORMULA_PREFIXES = ("=", "+", "-", "@")
 CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+NUMERIC_LITERAL_RE = re.compile(r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$")
+
+
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def _read_text(path: Path) -> tuple[str, str]:
@@ -27,6 +36,26 @@ def _dialect(text: str):
         return csv.Sniffer().sniff(text[:8192], delimiters=",\t;")
     except csv.Error:
         return csv.excel
+
+
+def _formula_candidate(value: str) -> bool:
+    stripped = value.lstrip()
+    if not stripped:
+        return False
+    if stripped[0] in "=@":
+        return True
+    if stripped[0] in "+-":
+        # 普通の符号付き数値はFormula Injection候補にしない。
+        return not bool(NUMERIC_LITERAL_RE.fullmatch(stripped.replace(",", "")))
+    return False
+
+
+def _safe_csv(value: object) -> object:
+    if not isinstance(value, str):
+        return value
+    if _formula_candidate(value):
+        return "'" + value
+    return value
 
 
 def _issue(severity: str, code: str, message: str, row=None, column=None, value=None) -> dict:
@@ -101,23 +130,15 @@ def validate_csv(
             continue
         data_rows += 1
         if len(values) != len(headers):
-            issues.append(
-                _issue(
-                    "error",
-                    "column_count_mismatch",
-                    f"列数がヘッダーと一致しません ({len(values)} != {len(headers)})。",
-                    row=row_number,
-                )
-            )
+            issues.append(_issue("error", "column_count_mismatch", f"列数がヘッダーと一致しません ({len(values)} != {len(headers)})。", row=row_number))
             continue
 
         for index, value in enumerate(values):
             column = headers[index] if index < len(headers) else str(index + 1)
-            stripped = value.strip()
             if CONTROL_RE.search(value):
                 issues.append(_issue("warning", "control_character", "制御文字候補があります。", row_number, column, value))
-            if stripped.startswith(FORMULA_PREFIXES):
-                issues.append(_issue("warning", "formula_prefix_candidate", "表計算ソフトで数式として解釈され得る先頭文字があります。", row_number, column, value))
+            if _formula_candidate(value):
+                issues.append(_issue("warning", "formula_prefix_candidate", "表計算ソフトで数式として解釈され得る値です。", row_number, column, value))
 
         for column in required:
             if column in headers and not values[headers.index(column)].strip():
@@ -128,16 +149,10 @@ def validate_csv(
             if any(not part for part in key):
                 issues.append(_issue("error", "blank_key", "キー列に空欄があります。", row_number, ",".join(key_columns)))
             elif key in seen_keys:
-                issues.append(
-                    _issue(
-                        "error",
-                        "duplicate_key",
-                        f"キーが重複しています。最初の出現行: {seen_keys[key]}",
-                        row_number,
-                        ",".join(key_columns),
-                        " | ".join(key),
-                    )
-                )
+                issues.append(_issue(
+                    "error", "duplicate_key", f"キーが重複しています。最初の出現行: {seen_keys[key]}",
+                    row_number, ",".join(key_columns), " | ".join(key),
+                ))
             else:
                 seen_keys[key] = row_number
 
@@ -152,7 +167,7 @@ def validate_csv(
     run_dir.mkdir()
 
     summary = {
-        "source": str(source),
+        "source_file": {"name": source.name, "sha256": sha256_file(source)},
         "encoding": encoding,
         "delimiter": getattr(dialect, "delimiter", ","),
         "headers": headers,
@@ -161,6 +176,10 @@ def validate_csv(
         "warning_count": sum(i["severity"] == "warning" for i in issues),
         "issues": issues,
         "schema": schema,
+        "limitations": [
+            "Formula-prefix findings identify spreadsheet-execution candidates; they do not prove malicious content.",
+            "CSV encoding detection is limited to the supported encoding list.",
+        ],
     }
     (run_dir / "report.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -168,7 +187,8 @@ def validate_csv(
         fieldnames = ["severity", "code", "row", "column", "message", "value_preview"]
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(issues)
+        for issue in issues:
+            writer.writerow({key: _safe_csv(issue.get(key, "")) for key in fieldnames})
 
     return run_dir
 
@@ -179,12 +199,8 @@ def main() -> None:
     parser.add_argument("--schema")
     parser.add_argument("--output", default="reports")
     args = parser.parse_args()
-
-    schema = None
-    if args.schema:
-        schema = json.loads(Path(args.schema).read_text(encoding="utf-8"))
-    result = validate_csv(args.input, args.output, schema)
-    print(result)
+    schema = json.loads(Path(args.schema).read_text(encoding="utf-8")) if args.schema else None
+    print(validate_csv(args.input, args.output, schema))
 
 
 if __name__ == "__main__":
