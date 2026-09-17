@@ -1,15 +1,15 @@
+import csv
 import tempfile
 import unittest
 from pathlib import Path
 
 import pandas as pd
 
-from contract_auditor import audit_drift, evaluate_contract, profile_dataframe
+from contract_auditor import audit_drift, evaluate_contract, profile_dataframe, save_audit
 
 
 class ContractAuditorTests(unittest.TestCase):
     def test_contract_violations_are_separate_from_drift(self):
-        baseline = pd.DataFrame({"id": [1, 2, 3], "amount": [10, 20, 30]})
         current = pd.DataFrame({"id": [1, 2, 3], "amount": [10, None, None]})
         contract = {
             "version": 1,
@@ -54,6 +54,38 @@ class ContractAuditorTests(unittest.TestCase):
             report = audit_drift(baseline, current)
             self.assertTrue(any(f["code"] == "numeric_mean_shift" for f in report["drift_findings"]))
             self.assertEqual(report["summary"]["release_gate"], "review")
+
+    def test_identical_data_can_pass_gate(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            baseline = root / "baseline.csv"
+            current = root / "current.csv"
+            content = "id,amount\n1,10\n2,20\n3,30\n"
+            baseline.write_text(content, encoding="utf-8")
+            current.write_text(content, encoding="utf-8")
+            report = audit_drift(baseline, current)
+            self.assertEqual(report["summary"]["release_gate"], "pass")
+            self.assertEqual(report["summary"]["contract_errors"], 0)
+            self.assertEqual(report["summary"]["drift_warnings"], 0)
+
+    def test_findings_csv_escapes_formula_like_column_name(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            baseline = root / "baseline.csv"
+            current = root / "current.csv"
+            baseline.write_text("id\n1\n2\n", encoding="utf-8")
+            current.write_text("id,=HYPERLINK(\"https://example.com\")\n1,x\n2,y\n", encoding="utf-8")
+            contract = {
+                "version": 1,
+                "allow_extra_columns": False,
+                "columns": {"id": {"required": True, "kind": "numeric", "max_null_rate": 0.0}},
+            }
+            report = audit_drift(baseline, current, contract=contract)
+            out = save_audit(report, root / "out")
+            with (out / "contract_violations.csv").open("r", encoding="utf-8-sig", newline="") as fh:
+                rows = list(csv.DictReader(fh))
+            unexpected = next(row for row in rows if row["code"] == "unexpected_column")
+            self.assertTrue(unexpected["column"].startswith("'="))
 
 
 if __name__ == "__main__":
