@@ -25,15 +25,20 @@ jobs:
         run: python -m compileall -q .
       - name: Build Windows executable
         run: pyinstaller --noconfirm --clean --onefile --windowed --name DataContractAuditor app.py
-      - name: Create checksums
+      - name: Assemble release candidate bundle
         shell: pwsh
         run: |
-          $hash = (Get-FileHash dist\DataContractAuditor.exe -Algorithm SHA256).Hash.ToLower()
-          "$hash  DataContractAuditor.exe" | Out-File -Encoding ascii dist\SHA256SUMS.txt
+          New-Item -ItemType Directory -Force dist\bundle | Out-Null
+          Copy-Item dist\DataContractAuditor.exe dist\bundle\DataContractAuditor.exe
+          python tools\collect_licenses.py dist\bundle\THIRD_PARTY_LICENSES
+          Copy-Item CHANGELOG.md dist\bundle\CHANGELOG.md
+          Compress-Archive -Path dist\bundle\* -DestinationPath dist\DataContractAuditor-windows.zip -Force
+          $hash = (Get-FileHash dist\DataContractAuditor-windows.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  DataContractAuditor-windows.zip" | Out-File -Encoding ascii dist\SHA256SUMS.txt
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: DataContractAuditor-windows
           path: |
-            dist/DataContractAuditor.exe
+            dist/DataContractAuditor-windows.zip
             dist/SHA256SUMS.txt
