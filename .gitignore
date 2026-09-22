@@ -7,5 +7,15 @@ dist/
 *.spec
 .pytest_cache/
 reports/
+.rc-build/
+artifacts/
 .DS_Store
 Thumbs.db
+
+# Never commit test or production credentials.
+client_secret*.json
+credentials*.json
+oauth*.json
+token*.json
+service-account*.json
+*.secret.json
