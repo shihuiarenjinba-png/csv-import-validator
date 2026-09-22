@@ -1,4 +1,4 @@
-name: windows-rc
+name: windows-direct-rc
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  build-windows-portable:
+  build-windows-direct:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -23,16 +23,17 @@ jobs:
           python-version: "3.12"
           architecture: "x64"
 
-      - name: Build and verify RC
+      - name: Build and verify direct EXE RC
         shell: pwsh
         run: ./build-windows-portable.ps1
 
-      - name: Upload RC artifacts
+      - name: Upload RC build outputs
         uses: actions/upload-artifact@v4
         with:
-          name: data-contract-schema-drift-auditor-windows-rc
+          name: data-contract-schema-drift-auditor-windows-direct-rc
           path: |
-            artifacts/*.zip
+            artifacts/*.exe
             artifacts/*.sha256
+            artifacts/runtime-requirements-lock.txt
           if-no-files-found: error
           retention-days: 14
