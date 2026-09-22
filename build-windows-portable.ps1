@@ -1,6 +1,5 @@
 param(
-    [string]$ProductName = "DataContractSchemaDriftAuditor",
-    [string]$ZipName = "Data-Contract-Schema-Drift-Auditor-Windows-Portable-RC.zip"
+    [string]$ProductName = "Data-Contract-Schema-Drift-Auditor"
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,19 +7,14 @@ Set-StrictMode -Version Latest
 
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Root
-
 $BuildRoot = Join-Path $Root ".rc-build"
 $Venv = Join-Path $BuildRoot "venv"
-$StageRoot = Join-Path $BuildRoot "stage"
-$PackageRoot = Join-Path $StageRoot $ProductName
 $Artifacts = Join-Path $Root "artifacts"
 $Dist = Join-Path $Root "dist"
-$Build = Join-Path $Root "build"
+$BuildDir = Join-Path $Root "build"
 
 function Remove-IfExists([string]$Path) {
-    if (Test-Path $Path) {
-        Remove-Item -LiteralPath $Path -Recurse -Force
-    }
+    if (Test-Path $Path) { Remove-Item -LiteralPath $Path -Recurse -Force }
 }
 
 function Assert-NoCredentialMaterial {
@@ -33,7 +27,6 @@ function Assert-NoCredentialMaterial {
         '"client_secret"\s*:\s*"[^"$]',
         '"refresh_token"\s*:\s*"[^"$]'
     )
-
     $files = Get-ChildItem -Path $Root -Recurse -File | Where-Object {
         $full = $_.FullName
         $blocked = $false
@@ -43,14 +36,11 @@ function Assert-NoCredentialMaterial {
         }
         (-not $blocked) -and ($extensions -contains $_.Extension.ToLowerInvariant())
     }
-
     foreach ($file in $files) {
         $text = Get-Content -LiteralPath $file.FullName -Raw -ErrorAction SilentlyContinue
         if ($null -eq $text) { continue }
         foreach ($pattern in $patterns) {
-            if ($text -match $pattern) {
-                throw "Potential credential material detected in $($file.FullName). RC build stopped."
-            }
+            if ($text -match $pattern) { throw "Potential credential material detected in $($file.FullName)." }
         }
     }
 }
@@ -60,14 +50,13 @@ Assert-NoCredentialMaterial
 
 Remove-IfExists $BuildRoot
 Remove-IfExists $Dist
-Remove-IfExists $Build
+Remove-IfExists $BuildDir
 Remove-IfExists $Artifacts
 New-Item -ItemType Directory -Path $BuildRoot, $Artifacts | Out-Null
 
 Write-Host "== Python environment =="
 py -3.12 -m venv $Venv
 $Python = Join-Path $Venv "Scripts\python.exe"
-
 & $Python -m pip install --upgrade pip
 if (Test-Path (Join-Path $Root "requirements.txt")) {
     & $Python -m pip install -r (Join-Path $Root "requirements.txt")
@@ -75,33 +64,28 @@ if (Test-Path (Join-Path $Root "requirements.txt")) {
 
 Write-Host "== Source tests =="
 & $Python -m unittest discover -s tests -v
-if ($LASTEXITCODE -ne 0) {
-    throw "Source tests failed."
-}
+if ($LASTEXITCODE -ne 0) { throw "Source tests failed." }
 
-Write-Host "== Runtime dependency lock snapshot =="
-& $Python -m pip freeze | Set-Content -LiteralPath (Join-Path $BuildRoot "runtime-requirements-lock.txt") -Encoding UTF8
+Write-Host "== Dependency snapshot =="
+& $Python -m pip freeze | Set-Content -LiteralPath (Join-Path $Artifacts "runtime-requirements-lock.txt") -Encoding UTF8
 
-Write-Host "== PyInstaller build =="
+Write-Host "== One-file Windows EXE build =="
 & $Python -m pip install "pyinstaller>=6,<7"
-$PyInstallerArgs = @(
+$Args = @(
     "--noconfirm",
     "--clean",
+    "--onefile",
     "--windowed",
     "--name", $ProductName,
     (Join-Path $Root "app.py")
 )
-& $Python -m PyInstaller @PyInstallerArgs
-if ($LASTEXITCODE -ne 0) {
-    throw "PyInstaller build failed."
-}
+& $Python -m PyInstaller @Args
+if ($LASTEXITCODE -ne 0) { throw "PyInstaller build failed." }
 
-$Exe = Join-Path $Dist "$ProductName\$ProductName.exe"
-if (-not (Test-Path $Exe)) {
-    throw "Built executable was not found: $Exe"
-}
+$Exe = Join-Path $Dist "$ProductName.exe"
+if (-not (Test-Path $Exe)) { throw "Built executable was not found: $Exe" }
 
-Write-Host "== Packaged executable smoke test =="
+Write-Host "== Packaged executable startup smoke test =="
 $Process = Start-Process -FilePath $Exe -PassThru
 try {
     Start-Sleep -Seconds 5
@@ -116,61 +100,16 @@ finally {
     }
 }
 
-Write-Host "== RC staging =="
-New-Item -ItemType Directory -Path $PackageRoot -Force | Out-Null
-Copy-Item -Path (Join-Path $Dist "$ProductName\*") -Destination $PackageRoot -Recurse -Force
-Copy-Item -LiteralPath (Join-Path $Root "README.md") -Destination $PackageRoot -Force
-if (Test-Path (Join-Path $Root "schema.example.json")) {
-    Copy-Item -LiteralPath (Join-Path $Root "schema.example.json") -Destination $PackageRoot -Force
-}
-Copy-Item -LiteralPath (Join-Path $BuildRoot "runtime-requirements-lock.txt") -Destination $PackageRoot -Force
+$TargetExe = Join-Path $Artifacts "$ProductName-RC.exe"
+Copy-Item -LiteralPath $Exe -Destination $TargetExe -Force
+$Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $TargetExe).Hash.ToLowerInvariant()
+"$Hash  $([IO.Path]::GetFileName($TargetExe))" | Set-Content -LiteralPath "$TargetExe.sha256" -Encoding ASCII
 
-@"
-RC CANDIDATE ONLY — NOT FOR SALE
-
-This ZIP is an internal Windows portable release candidate.
-It has passed source tests, a credential-marker scan, PyInstaller packaging,
-and a packaged-process startup smoke test.
-
-Sales/public-release blockers remain until explicitly completed:
-- approved product LICENSE
-- approved third-party NOTICE
-- approved SBOM
-- Authenticode signing and signature verification
-- manual Windows acceptance testing on supported versions/display scales
-
-Do not add OAuth client JSON, refresh tokens, API keys, or other credentials to
-this package. Test credentials must remain outside the repository and ZIP.
-"@ | Set-Content -LiteralPath (Join-Path $PackageRoot "RC-NOT-FOR-SALE.txt") -Encoding UTF8
-
-Write-Host "== Final staged credential scan =="
-$stagedTextFiles = Get-ChildItem -Path $PackageRoot -Recurse -File | Where-Object {
-    $_.Extension.ToLowerInvariant() -in @(".txt", ".md", ".json", ".yaml", ".yml", ".ini", ".cfg")
-}
-foreach ($file in $stagedTextFiles) {
-    $text = Get-Content -LiteralPath $file.FullName -Raw -ErrorAction SilentlyContinue
-    if ($null -eq $text) { continue }
-    if ($text -match 'AIza[0-9A-Za-z_\-]{25,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|"private_key"\s*:\s*"|"client_secret"\s*:\s*"[^"$]|"refresh_token"\s*:\s*"[^"$]') {
-        throw "Potential credential material detected in staged file $($file.FullName)."
-    }
-}
-
-$ZipPath = Join-Path $Artifacts $ZipName
-Compress-Archive -Path $PackageRoot -DestinationPath $ZipPath -CompressionLevel Optimal
-
-Write-Host "== Re-extract and verify =="
-$VerifyRoot = Join-Path $BuildRoot "verify"
-Remove-IfExists $VerifyRoot
-Expand-Archive -LiteralPath $ZipPath -DestinationPath $VerifyRoot
-$VerifiedExe = Join-Path $VerifyRoot "$ProductName\$ProductName.exe"
-if (-not (Test-Path $VerifiedExe)) {
-    throw "Re-extracted ZIP does not contain the executable."
-}
-
-$Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $ZipPath).Hash.ToLowerInvariant()
-"$Hash  $ZipName" | Set-Content -LiteralPath (Join-Path $Artifacts "$ZipName.sha256") -Encoding ASCII
+Write-Host "== Final artifact checks =="
+if ((Get-Item $TargetExe).Length -le 0) { throw "EXE artifact is empty." }
+Assert-NoCredentialMaterial
 
 Write-Host ""
 Write-Host "RC_BUILD_PASS"
-Write-Host "ZIP: $ZipPath"
+Write-Host "EXE: $TargetExe"
 Write-Host "SHA256: $Hash"
