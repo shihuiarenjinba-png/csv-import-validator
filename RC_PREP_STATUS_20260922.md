@@ -32,3 +32,12 @@ credential-backed integration tests must inject them only at test runtime.
 - Authenticode (deferred)
 
 The default branch is unchanged.
+
+
+## GitHub Actions execution note
+
+Push-triggered workflow runs were created, but the jobs failed before any runner
+steps started. The job records contain no step list and no job log URL, so these
+runs do not provide evidence of a source-test, PyInstaller, or runtime failure.
+Automatic push triggering is paused on this branch; the workflow remains
+available for manual dispatch when the Windows runner environment is available.
