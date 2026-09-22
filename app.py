@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -90,4 +91,8 @@ class DataContractAuditApp(tk.Tk):
 
 
 if __name__ == "__main__":
-    DataContractAuditApp().mainloop()
+    if len(sys.argv) >= 5 and sys.argv[1] == "--acceptance-audit":
+        keys = [value for value in sys.argv[5].split(",") if value] if len(sys.argv) > 5 else []
+        save_audit(audit_drift(sys.argv[2], sys.argv[3], key_columns=keys), sys.argv[4])
+    else:
+        DataContractAuditApp().mainloop()
