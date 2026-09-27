@@ -18,7 +18,9 @@ class DataContractAuditApp(tk.Tk):
         self.baseline = tk.StringVar()
         self.current = tk.StringVar()
         self.keys = tk.StringVar()
-        self.output_dir = tk.StringVar(value=str(Path.cwd() / "data_contract_audit"))
+        self.output_dir = tk.StringVar(
+            value=str(Path.home() / "Documents" / "Data Contract Auditor" / "Output")
+        )
         self.status = tk.StringVar(value="基準ファイルと今回ファイルを選択してください。")
 
         root = ttk.Frame(self, padding=16)
@@ -30,9 +32,15 @@ class DataContractAuditApp(tk.Tk):
             wraplength=840,
         ).pack(anchor="w", pady=(4, 14))
 
-        self._path_row(root, "Baseline", self.baseline, lambda: self._pick(self.baseline))
-        self._path_row(root, "Current", self.current, lambda: self._pick(self.current))
+        self._path_row(root, "基準（旧/正常）", self.baseline, lambda: self._pick(self.baseline))
+        self._path_row(root, "今回（新/比較）", self.current, lambda: self._pick(self.current))
         self._path_row(root, "出力先", self.output_dir, self._pick_output)
+
+        ttk.Label(
+            root,
+            text="入力: CSV / XLSX / XLSM。出力: JSON監査、CSV所見、基準から生成したData Contract。元ファイルは変更しません。",
+            wraplength=840,
+        ).pack(anchor="w", pady=(2, 8))
 
         row = ttk.Frame(root)
         row.pack(fill="x", pady=5)
