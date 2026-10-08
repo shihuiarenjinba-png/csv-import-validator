@@ -127,12 +127,12 @@ class DataContractAuditApp(tk.Tk):
         ttk.Button(row, text="選択", command=command).pack(side="left")
 
     def _pick(self, variable):
-        path = filedialog.askopenfilename(filetypes=[("CSV / Excel", "*.csv *.xlsx *.xlsm"), ("All", "*.*")])
+        path = filedialog.askopenfilename(parent=self, filetypes=[("CSV / Excel", "*.csv *.xlsx *.xlsm"), ("All", "*.*")])
         if path:
             variable.set(path)
 
     def _pick_output(self):
-        path = filedialog.askdirectory()
+        path = filedialog.askdirectory(parent=self)
         if path:
             self.output_dir.set(path)
 
