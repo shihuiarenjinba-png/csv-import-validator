@@ -110,6 +110,7 @@ finally {
 $TargetExe = Join-Path $Artifacts "$ProductName-RC.exe"
 Copy-Item -LiteralPath $Exe -Destination $TargetExe -Force
 Copy-Item -LiteralPath (Join-Path $Root "README.md") -Destination (Join-Path $Artifacts "$ProductName-README.md") -Force
+Copy-Item -LiteralPath (Join-Path $Root "START_HERE.html") -Destination (Join-Path $Artifacts "START_HERE.html") -Force
 if (Test-Path (Join-Path $Root "schema.example.json")) {
     Copy-Item -LiteralPath (Join-Path $Root "schema.example.json") -Destination (Join-Path $Artifacts "schema.example.json") -Force
 }

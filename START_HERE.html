@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>はじめに — Data Contract &amp; Schema Drift Auditor</title>
+<style>body{font-family:"Segoe UI",Meiryo,sans-serif;max-width:920px;margin:34px auto;padding:0 24px;line-height:1.72;color:#172033}h1{color:#173f67}h2{margin-top:28px;border-bottom:2px solid #dce7f1}.box,.warn{padding:13px 17px;border-radius:8px}.box{background:#eef7ff}.warn{background:#fff4dc;border-left:5px solid #d78a00}code{background:#edf2f6;padding:2px 5px}li{margin:.3em 0}footer{margin-top:32px;color:#667085}</style>
+</head>
+<body>
+<h1>Data Contract &amp; Schema Drift Auditor — はじめに</h1>
+<div class="box">BaselineとCurrentのCSV／Excelを比較し、列、型、NULL率、値範囲、カテゴリ、キー重複等の変化候補をローカル監査します。</div>
+<h2>最初にやること</h2>
+<ol>
+<li>EXEを起動します。</li>
+<li>BaselineとCurrentを選びます。</li>
+<li>必要ならKey列を指定します。</li>
+<li>監査を実行します。</li>
+<li>findings CSV、audit JSON、generated contractを確認します。</li>
+</ol>
+<h2>入力例</h2>
+<p>
+<code>export_202609.csv</code>と<code>export_202610.csv</code>を比較し、<code>customer_id</code>の重複率変化を確認。</p>
+<h2>出力されるもの</h2>
+<ul>
+<li>
+<code>data_drift_audit.json</code>：集計と比較内容。</li>
+<li>
+<code>data_drift_findings.csv</code>：確認候補。</li>
+<li>
+<code>generated_contract.json</code>：Baselineから生成した簡易contract。</li>
+</ul>
+<h2>制限</h2>
+<p>検出結果は要確認候補で、業務投入可否やデータの正しさを保証しません。複数sheet完全比較等は現行対象外です。</p>
+<h2>よくあるエラー</h2>
+<p>入力不足、対応外形式、破損・暗号化、Key列不一致、書き込み不可を確認します。現在pandas DLLがApplication Controlによりブロックされる環境があり、回避・無効化はしません。</p>
+<h2>対応環境・既知の制限</h2>
+<p>
+<strong>BLOCKED_BY_APPLICATION_CONTROL</strong>。許可されたWindows 11環境でclean buildとpackaged acceptanceが必要です。</p>
+<h2>問い合わせ</h2>
+<p>BOOTH販売時はBOOTHの「ショップへのお問い合わせ」が一次窓口です。利用できない場合のみ <a href="mailto:dmzmr37049@yahoo.co.jp">dmzmr37049@yahoo.co.jp</a> を利用してください。購入者限定サポートでは注文確認をお願いする場合があります。</p>
+<footer>Windows 11 64-bit候補／Sales release: NO</footer>
+</body>
+</html>
+
