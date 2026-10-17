@@ -5,6 +5,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from contract_auditor import audit_drift, save_audit
+from contract_runtime import check_contract, load_contract, save_contract_audit
 
 
 class DataContractAuditApp(tk.Tk):
@@ -39,7 +40,10 @@ class DataContractAuditApp(tk.Tk):
         ttk.Entry(row, textvariable=self.keys).pack(side="left", fill="x", expand=True)
         ttk.Label(row, text=" 例: customer_id,date").pack(side="left")
 
-        ttk.Button(root, text="Schema Drift監査を実行", command=self.run_audit).pack(anchor="w", pady=(12, 8))
+        controls = ttk.Frame(root)
+        controls.pack(anchor="w", pady=(12, 8))
+        ttk.Button(controls, text="基準と今回を比較", command=self.run_audit).pack(side="left")
+        ttk.Button(controls, text="保存済みContractで今回を検査", command=self.run_saved_contract).pack(side="left", padx=(10, 0))
         ttk.Label(root, textvariable=self.status, wraplength=840).pack(anchor="w", pady=(0, 10))
 
         self.tree = ttk.Treeview(root, columns=("severity", "code", "column", "message", "baseline", "current"), show="headings", height=15)
@@ -86,6 +90,35 @@ class DataContractAuditApp(tk.Tk):
             self.status.set(f"完了: error={s['errors']} / warning={s['warnings']} / info={s['info']} / {out}")
         except Exception as exc:
             messagebox.showerror("監査失敗", str(exc))
+            self.status.set(f"失敗: {exc}")
+
+
+    def run_saved_contract(self):
+        if not self.current.get():
+            messagebox.showwarning("入力不足", "今回ファイルを先に選択してください。")
+            return
+        contract_file = filedialog.askopenfilename(
+            title="以前保存したContract JSONを選択",
+            filetypes=[("Data Contract JSON", "*.json"), ("All", "*.*")]
+        )
+        if not contract_file:
+            return
+        try:
+            report = check_contract(self.current.get(), load_contract(contract_file))
+            output = save_contract_audit(report, self.output_dir.get())
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+            for issue in report["findings"][:1000]:
+                self.tree.insert("", "end", values=(
+                    issue["severity"], issue["code"], issue["column"],
+                    issue["detail"], "", ""
+                ))
+            self.status.set(
+                f"{report['status']} / 検証対象 {len(report['checked_columns'])}列 / "
+                f"対象外 {len(report['unchecked_columns'])}列 / {output}"
+            )
+        except Exception as exc:
+            messagebox.showerror("Contract検証失敗", str(exc))
             self.status.set(f"失敗: {exc}")
 
 
