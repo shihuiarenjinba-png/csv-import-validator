@@ -1,1 +1,5 @@
-# MVPはPython標準ライブラリのみで動作します。
+# Data Contract / Schema Drift needs dataframe/Excel dependencies.
+# The original validator.py remains standard-library only.
+numpy>=1.26,<3
+pandas>=2.2,<3
+openpyxl>=3.1,<4
