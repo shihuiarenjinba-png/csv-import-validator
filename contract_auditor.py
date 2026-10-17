@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+from datetime import datetime
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -26,7 +27,7 @@ def load_table(path: str | Path, sheet_name: str | int = 0) -> pd.DataFrame:
         last_error = None
         for enc in ("utf-8-sig", "utf-8", "cp932", "shift_jis"):
             try:
-                return pd.read_csv(p, encoding=enc)
+                return pd.read_csv(p, encoding=enc, dtype=str, keep_default_na=False, na_values=[""])
             except UnicodeDecodeError as exc:
                 last_error = exc
         raise last_error or ValueError("CSV encoding could not be detected")
@@ -217,10 +218,39 @@ def audit_drift(
     }
 
 
+def _safe_csv_value(value):
+    """Prevent report-cell formulas while keeping the JSON evidence unchanged."""
+    if isinstance(value, str) and (
+        value.lstrip().startswith(("=", "+", "-", "@")) or value[:1] in ("\t", "\r", "\n")
+    ):
+        return "'" + value
+    return value
+
+
 def save_audit(report: dict, output_dir: str | Path) -> Path:
-    out = Path(output_dir).expanduser().resolve()
-    out.mkdir(parents=True, exist_ok=True)
-    (out / "data_drift_audit.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    (out / "generated_contract.json").write_text(json.dumps(report["generated_contract"], ensure_ascii=False, indent=2), encoding="utf-8")
-    pd.DataFrame(report["findings"]).to_csv(out / "data_drift_findings.csv", index=False, encoding="utf-8-sig")
+    base = Path(output_dir).expanduser().resolve()
+    base.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    index = 0
+    while True:
+        suffix = f"_{index}" if index else ""
+        out = base / f"drift_audit_{stamp}{suffix}"
+        try:
+            out.mkdir()
+            break
+        except FileExistsError:
+            index += 1
+    findings = pd.DataFrame(report["findings"])
+    safe_findings = findings.apply(lambda column: column.map(_safe_csv_value))
+    escape_count = sum(
+        _safe_csv_value(value) != value
+        for finding in report["findings"] for value in finding.values()
+    )
+    output_report = {**report, "report_csv_formula_values_escaped": escape_count}
+    with (out / "data_drift_audit.json").open("x", encoding="utf-8") as file:
+        json.dump(output_report, file, ensure_ascii=False, indent=2)
+    with (out / "generated_contract.json").open("x", encoding="utf-8") as file:
+        json.dump(report["generated_contract"], file, ensure_ascii=False, indent=2)
+    safe_findings.to_csv(out / "data_drift_findings.csv", index=False,
+                         encoding="utf-8-sig", mode="x")
     return out
