@@ -72,7 +72,7 @@ def check_contract(current_path: str | Path, contract: dict) -> dict:
                     sample = stream.read(8192)
                     stream.seek(0)
                     try:
-                        dialect = _csv.Sniffer().sniff(sample, delimiters=",\\t;")
+                        dialect = _csv.Sniffer().sniff(sample, delimiters=",;" + chr(9))
                     except _csv.Error:
                         dialect = _csv.excel
                     header = next(_csv.reader(stream, dialect), [])
