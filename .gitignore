@@ -9,3 +9,6 @@ dist/
 reports/
 .DS_Store
 Thumbs.db
+
+store-output/
+store/assets/
