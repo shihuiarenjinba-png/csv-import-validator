@@ -1,0 +1,29 @@
+name: Schema Drift commercial regression
+on:
+  push:
+    branches:
+      - 'codex/commercial-completion-20261018'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install runtime dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run schema and validator unit tests
+        run: python -m unittest discover -s tests -p 'test*.py' -v
+      - name: Compile source and tests
+        run: python -m compileall -q app.py contract_auditor.py validator.py tests
+      - name: Release hold
+        run: echo "Human GUI, Windows installed package, data correctness review, and WACK not yet cleared."
