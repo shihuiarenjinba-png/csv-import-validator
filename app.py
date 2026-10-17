@@ -18,7 +18,7 @@ class DataContractAuditApp(tk.Tk):
         self.baseline = tk.StringVar()
         self.current = tk.StringVar()
         self.keys = tk.StringVar()
-        self.output_dir = tk.StringVar(value=str(Path.cwd() / "data_contract_audit"))
+        self.output_dir = tk.StringVar(value=str((Path.home() / "Documents" if (Path.home() / "Documents").is_dir() else Path.home()) / "DataContractAudits"))
         self.status = tk.StringVar(value="基準ファイルと今回ファイルを選択してください。")
 
         root = ttk.Frame(self, padding=16)
