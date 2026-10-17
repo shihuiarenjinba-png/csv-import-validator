@@ -1,0 +1,31 @@
+name: Store candidate regression
+on:
+  push:
+    branches:
+      - 'feature/store-paid-msix-quality-20261017'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  python-qa:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+      - name: Install declared dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run all unit regressions
+        run: python -m unittest discover -s tests -p 'test*.py' -v
+      - name: Verify all Python modules compile
+        run: python -m compileall -q app.py
+      - name: Report commercial blockers
+        run: echo "QA-only. Product Identity, approved images, signed/Store MSIX, Windows GUI and WACK are separate HOLD gates."
