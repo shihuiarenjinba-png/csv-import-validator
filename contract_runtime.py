@@ -9,6 +9,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import math
 import tempfile
 from pathlib import Path
 
@@ -18,7 +19,9 @@ from contract_auditor import load_table, _infer_kind
 
 
 def load_contract(path: str | Path) -> dict:
-    item = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    def reject_constant(value):
+        raise ValueError(f"Non-finite JSON number is invalid: {value}")
+    item = json.loads(Path(path).read_text(encoding="utf-8-sig"), parse_constant=reject_constant)
     if not isinstance(item, dict) or type(item.get("version")) is not int or item["version"] != 1:
         raise ValueError("Unsupported or missing contract version (required: 1)")
     if not isinstance(item.get("columns"), dict) or not item["columns"]:
@@ -44,11 +47,11 @@ def load_contract(path: str | Path) -> dict:
         if "allowed_values" in rules and (
             not isinstance(rules["allowed_values"], list) or
             len(rules["allowed_values"]) > 500 or
-            any(not isinstance(x, (str, int, float, bool)) or pd.isna(x) for x in rules["allowed_values"])
+            any(not isinstance(x, (str, int, float, bool)) or pd.isna(x) or (isinstance(x, float) and not math.isfinite(x)) for x in rules["allowed_values"])
         ):
             raise ValueError(f"Invalid allowed_values for {name}")
         for bound in ("min", "max"):
-            if bound in rules and (isinstance(rules[bound], bool) or not isinstance(rules[bound], (int, float))):
+            if bound in rules and (isinstance(rules[bound], bool) or not isinstance(rules[bound], (int, float)) or not math.isfinite(rules[bound])):
                 raise ValueError(f"Invalid {bound} for {name}")
         if rules.get("min", float("-inf")) > rules.get("max", float("inf")):
             raise ValueError(f"Impossible min/max for {name}")
@@ -58,12 +61,32 @@ def load_contract(path: str | Path) -> dict:
 def check_contract(current_path: str | Path, contract: dict) -> dict:
     file = Path(current_path).expanduser().resolve()
     data = load_table(file)
+    # pandas renames duplicate CSV headers (e.g. "id,id" -> "id,id.1").
+    # Inspect source headers before trusting its DataFrame column names.
+    duplicate_source_headers = []
+    if file.suffix.lower() == ".csv":
+        import csv as _csv
+        for encoding in ("utf-8-sig", "utf-8", "cp932", "shift_jis"):
+            try:
+                with file.open("r", encoding=encoding, newline="") as stream:
+                    sample = stream.read(8192)
+                    stream.seek(0)
+                    try:
+                        dialect = _csv.Sniffer().sniff(sample, delimiters=",\\t;")
+                    except _csv.Error:
+                        dialect = _csv.excel
+                    header = next(_csv.reader(stream, dialect), [])
+                duplicate_source_headers = sorted({x for x in header if header.count(x) > 1})
+                break
+            except UnicodeDecodeError:
+                continue
     checks: list[dict] = []
     def add(severity: str, code: str, column: str, detail: str):
         checks.append({"severity": severity, "code": code, "column": column, "detail": detail})
     columns = contract["columns"]
-    if not data.columns.is_unique:
-        add("error", "duplicate_header", "", "Duplicate column names cannot be proven safe.")
+    if duplicate_source_headers or not data.columns.is_unique:
+        add("error", "duplicate_header", ",".join(duplicate_source_headers),
+            "Duplicate source columns cannot be proven safe even when a reader renames them.")
     for name, rules in columns.items():
         if name not in data.columns:
             if rules.get("required", False):
@@ -112,8 +135,11 @@ def check_contract(current_path: str | Path, contract: dict) -> dict:
         "contract_version": 1, "source_file": file.name, "source_sha256": sha.hexdigest(),
         "row_count": len(data), "checked_columns": list(columns),
         "unchecked_columns": extras, "findings": checks,
-        "status": "CONTRACT_VIOLATION" if any(x["severity"] == "error" for x in checks)
-                  else "NO_VIOLATION_IN_DECLARED_FIELDS",
+        "status": (
+            "CONTRACT_VIOLATION" if any(x["severity"] == "error" for x in checks)
+            else "REVIEW_UNCHECKED_COLUMNS" if extras
+            else "NO_VIOLATION_IN_DECLARED_FIELDS"
+        ),
         "limitation": "This is data structure/constraints validation, not accounting, legal, security or ingestion approval."
     }
 
