@@ -26,8 +26,11 @@ class Finding:
 
 
 def load_table(path: str | Path, sheet_name: str | int = 0) -> pd.DataFrame:
-    p = Path(path).expanduser().resolve()
-    if not p.is_file() or p.is_symlink():
+    supplied = Path(path).expanduser()
+    if supplied.is_symlink():
+        raise ValueError("Select a regular input file, not a symbolic link")
+    p = supplied.resolve()
+    if not p.is_file():
         raise ValueError("Select an existing regular file, not a link or folder")
     if p.stat().st_size > 100 * 1024 * 1024:
         raise ValueError("Input exceeds the verified 100 MiB limit")
