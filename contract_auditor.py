@@ -62,7 +62,10 @@ def load_table(path: str | Path, sheet_name: str | int = 0) -> pd.DataFrame:
                 raise ValueError("Excel contains duplicate headers; audit is refused")
         finally:
             wb.close()
-        return pd.read_excel(p, sheet_name=sheet_name)
+        # Match CSV identity semantics: "00123" and literal "NA" must not
+        # silently become 123 or a missing value in imported business data.
+        return pd.read_excel(p, sheet_name=sheet_name, dtype=str,
+                             keep_default_na=False, na_values=[""])
     raise ValueError(f"Unsupported file type: {suffix}")
 
 
