@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - 'codex/commercial-completion-20261018'
+      - 'audit/paid-product-hardening-20261019'
   workflow_dispatch:
 permissions:
   contents: read
