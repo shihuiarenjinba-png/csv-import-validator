@@ -47,6 +47,21 @@ def load_table(path: str | Path, sheet_name: str | int = 0) -> pd.DataFrame:
                 last_error = exc
         raise last_error or ValueError("CSV encoding could not be detected")
     if suffix in {".xlsx", ".xlsm"}:
+        # Pandas silently renames repeated headers (e.g. amount -> amount.1).
+        # Contract audit must not infer a different input schema than the user
+        # actually supplied.
+        from openpyxl import load_workbook
+        wb = load_workbook(p, read_only=True, data_only=True, keep_links=False)
+        try:
+            ws = wb.worksheets[sheet_name] if isinstance(sheet_name, int) else wb[sheet_name]
+            raw_header = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), ())
+            raw_names = ["" if cell is None else str(cell).strip() for cell in raw_header]
+            if not raw_names or any(not name for name in raw_names):
+                raise ValueError("Excel headers must be nonempty and unique")
+            if len(set(raw_names)) != len(raw_names):
+                raise ValueError("Excel contains duplicate headers; audit is refused")
+        finally:
+            wb.close()
         return pd.read_excel(p, sheet_name=sheet_name)
     raise ValueError(f"Unsupported file type: {suffix}")
 
