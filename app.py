@@ -8,6 +8,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from contract_auditor import audit_drift, save_audit
 from audit_review_gate import input_revision
+from gui_schema_columns import common_key_candidates
 
 
 class DataContractAuditApp(tk.Tk):
@@ -23,6 +24,7 @@ class DataContractAuditApp(tk.Tk):
         self.output_dir = tk.StringVar(value=str(Path.cwd() / "data_contract_audit"))
         self.status = tk.StringVar(value="基準ファイルと今回ファイルを選択してください。")
         self._events = queue.Queue()
+        self._column_events = queue.Queue()
         self._running = False
         self._preview_signature = None
 
@@ -43,7 +45,11 @@ class DataContractAuditApp(tk.Tk):
         row.pack(fill="x", pady=5)
         ttk.Label(row, text="Key列", width=10).pack(side="left")
         ttk.Entry(row, textvariable=self.keys).pack(side="left", fill="x", expand=True)
-        ttk.Label(row, text=" 例: customer_id,date").pack(side="left")
+        self.key_pick_btn = ttk.Button(row, text="列名から選ぶ", command=self._pick_keys)
+        self.key_pick_btn.pack(side="left", padx=(8, 0))
+        ttk.Label(root, text="Key列は任意です。列名から選ぶか、カンマ区切りで入力できます。"
+                  "Key列を指定しない場合、重複キーの比較は行いません。",
+                  wraplength=840).pack(anchor="w")
 
         actions = ttk.Frame(root)
         actions.pack(anchor="w", pady=(12, 8))
@@ -87,6 +93,55 @@ class DataContractAuditApp(tk.Tk):
         path = filedialog.askdirectory()
         if path:
             self.output_dir.set(path)
+
+    def _pick_keys(self):
+        """Load headers in a background thread; never freeze the UI for Excel."""
+        if self._running:
+            return
+        baseline = self.baseline.get().strip()
+        current = self.current.get().strip()
+        if not baseline or not current:
+            messagebox.showinfo("列の選択", "先に基準ファイルと今回ファイルを選んでください。")
+            return
+        self.key_pick_btn.state(["disabled"])
+        self.status.set("両方のファイルの列名を読み込んでいます...")
+
+        def work():
+            try:
+                names = common_key_candidates(baseline, current)
+                self._column_events.put((True, names))
+            except Exception as exc:
+                self._column_events.put((False, str(exc)))
+        threading.Thread(target=work, daemon=True).start()
+
+    def _show_key_picker(self, names):
+        dialog = tk.Toplevel(self)
+        dialog.title("比較に使うKey列を選ぶ")
+        dialog.geometry("520x430")
+        dialog.transient(self)
+        dialog.grab_set()
+        frame = ttk.Frame(dialog, padding=14)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(frame, text="両方のファイルに共通する列から選択してください。"
+                  "CtrlまたはShiftで複数選べます。").pack(anchor="w", pady=(0, 8))
+        listbox = tk.Listbox(frame, selectmode=tk.EXTENDED, exportselection=False)
+        listbox.pack(fill="both", expand=True)
+        current = {x.strip() for x in self.keys.get().split(",") if x.strip()}
+        for index, name in enumerate(names):
+            listbox.insert("end", name)
+            if name in current:
+                listbox.selection_set(index)
+        buttons = ttk.Frame(frame)
+        buttons.pack(fill="x", pady=(12, 0))
+        def accept():
+            chosen = [names[int(i)] for i in listbox.curselection()]
+            self.keys.set(",".join(chosen))
+            self._preview_signature = None
+            self.status.set(f"Key列を{len(chosen)}件選択しました。次に試運転をしてください。")
+            dialog.destroy()
+        ttk.Button(buttons, text="この列を使う", command=accept).pack(side="left")
+        ttk.Button(buttons, text="キャンセル", command=dialog.destroy).pack(
+            side="left", padx=(10, 0))
 
     def run_audit(self, *, preview: bool = False):
         if self._running:
@@ -134,6 +189,17 @@ class DataContractAuditApp(tk.Tk):
         threading.Thread(target=worker, daemon=True).start()
 
     def _poll(self):
+        try:
+            while True:
+                ok, result = self._column_events.get_nowait()
+                self.key_pick_btn.state(["!disabled"])
+                if ok:
+                    self._show_key_picker(result)
+                else:
+                    self.status.set("列を読み込めませんでした。入力形式・権限を確認してください。")
+                    messagebox.showwarning("列の取得に失敗", str(result))
+        except queue.Empty:
+            pass
         try:
             while True:
                 ok, value, out, preview, signature = self._events.get_nowait()
