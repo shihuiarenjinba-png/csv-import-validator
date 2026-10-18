@@ -1,0 +1,14 @@
+{
+  "displayName": "Data Contract and Schema Drift Auditor",
+  "exeName": "DataContractSchemaDrift",
+  "appId": "DataContractSchemaDrift",
+  "brandAbbreviation": "DCS",
+  "needsBundledBrowser": false,
+  "productClass": "Windows paid productivity tool",
+  "storeStatus": "HOLD_OFFICIAL_PARTNER_IDENTITY_REQUIRED",
+  "commercialLicense": "NOT_CERTIFIED",
+  "entryPoint": "app.py",
+  "partnerCenterRegistration": "NOT_CONFIRMED",
+  "msixPackageStatus": "NOT_BUILT",
+  "notes": "Display name is a proposal until checked in Partner Center. Do not submit for certification."
+}
