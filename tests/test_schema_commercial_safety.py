@@ -18,6 +18,25 @@ class SchemaCommercialSafetyTests(unittest.TestCase):
             self.assertEqual(frame.iloc[0]["description"], "NA")
             self.assertTrue(frame["description"].isna().iloc[1])
 
+    def test_duplicate_and_empty_headers_are_blocked(self):
+        bad = ("id,id\\n1,2\\n", "id, id \\n1,2\\n", "id,  \\n1,2\\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "bad.csv"
+            for raw in bad:
+                with self.subTest(raw=raw):
+                    path.write_text(raw, encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, "column"):
+                        load_table(path)
+
+    def test_large_input_rejected_before_pandas_load(self):
+        from contract_auditor import MAX_INPUT_BYTES
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "large.csv"
+            with path.open("wb") as output:
+                output.truncate(MAX_INPUT_BYTES + 1)
+            with self.assertRaisesRegex(ValueError, "50 MB"):
+                load_table(path)
+
     def test_previous_report_is_preserved_and_dangerous_cell_is_safe(self):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "audit"
