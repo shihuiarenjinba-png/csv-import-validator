@@ -7,6 +7,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from contract_auditor import audit_drift, save_audit
+from audit_review_gate import input_revision
 
 
 class DataContractAuditApp(tk.Tk):
@@ -23,6 +24,7 @@ class DataContractAuditApp(tk.Tk):
         self.status = tk.StringVar(value="基準ファイルと今回ファイルを選択してください。")
         self._events = queue.Queue()
         self._running = False
+        self._preview_signature = None
 
         root = ttk.Frame(self, padding=16)
         root.pack(fill="both", expand=True)
@@ -43,8 +45,17 @@ class DataContractAuditApp(tk.Tk):
         ttk.Entry(row, textvariable=self.keys).pack(side="left", fill="x", expand=True)
         ttk.Label(row, text=" 例: customer_id,date").pack(side="left")
 
-        self.run_button = ttk.Button(root, text="Schema Drift監査を実行", command=self.run_audit)
-        self.run_button.pack(anchor="w", pady=(12, 8))
+        actions = ttk.Frame(root)
+        actions.pack(anchor="w", pady=(12, 8))
+        self.preview_button = ttk.Button(actions, text="1  試運転（保存なし）",
+                                         command=lambda: self.run_audit(preview=True))
+        self.preview_button.pack(side="left", padx=(0, 8))
+        self.run_button = ttk.Button(actions, text="2  確認してレポート保存",
+                                     command=lambda: self.run_audit(preview=False))
+        self.run_button.pack(side="left")
+        ttk.Label(root, text="試運転後、同じ入力ファイル・同じKey列の場合だけ保存できます。"
+                  "入力内容を変更した場合はもう一度試運転してください。",
+                  wraplength=840).pack(anchor="w")
         self.progress = ttk.Progressbar(root, mode="indeterminate")
         self.progress.pack(fill="x", pady=4)
         ttk.Label(root, textvariable=self.status, wraplength=840).pack(anchor="w", pady=(0, 10))
@@ -77,40 +88,59 @@ class DataContractAuditApp(tk.Tk):
         if path:
             self.output_dir.set(path)
 
-    def run_audit(self):
+    def run_audit(self, *, preview: bool = False):
         if self._running:
             return
-        if not self.baseline.get() or not self.current.get():
-            messagebox.showwarning("入力不足", "BaselineとCurrentを選択してください。")
-            return
-        baseline = self.baseline.get()
-        current = self.current.get()
-        if Path(baseline).resolve() == Path(current).resolve():
-            messagebox.showwarning("選択エラー", "同じファイル同士の監査はできません。")
-            return
+        baseline = self.baseline.get().strip()
+        current = self.current.get().strip()
         keys = [x.strip() for x in self.keys.get().split(",") if x.strip()]
-        output_dir = self.output_dir.get()
+        output_dir = self.output_dir.get().strip()
+        try:
+            signature = input_revision(baseline, current, keys)
+            if not preview and not output_dir:
+                raise ValueError("レポートの保存先を選択してください。")
+        except (ValueError, OSError) as exc:
+            messagebox.showwarning("入力の確認", str(exc))
+            self.status.set(f"入力を確認してください: {exc}")
+            return
+        if not preview:
+            if signature != self._preview_signature:
+                messagebox.showwarning("再試運転が必要",
+                                       "入力ファイルまたはKey列が変わりました。先に試運転してください。")
+                return
+            if not messagebox.askyesno(
+                "レポート作成の確認",
+                "試運転した入力を分析して新しい監査フォルダーを作成します。"
+                "元のCSV/Excelは上書きしません。続行しますか？",
+            ):
+                return
         self._running = True
         self.run_button.state(["disabled"])
+        self.preview_button.state(["disabled"])
         self.progress.start(15)
-        self.status.set("解析中です。元データは変更しません。")
+        self.status.set("保存なしで確認中..." if preview else "検査とレポート保存中...")
 
         def worker():
             try:
+                if input_revision(baseline, current, keys) != signature:
+                    raise ValueError("入力が処理開始前に変更されました。")
                 report = audit_drift(baseline, current, key_columns=keys)
-                out = save_audit(report, output_dir)
-                self._events.put((True, report, str(out)))
+                if input_revision(baseline, current, keys) != signature:
+                    raise ValueError("解析中に入力が変更されました。保存を中止しました。")
+                out = "" if preview else str(save_audit(report, output_dir))
+                self._events.put((True, report, out, preview, signature))
             except Exception as exc:
-                self._events.put((False, str(exc), ""))
+                self._events.put((False, str(exc), "", preview, None))
         threading.Thread(target=worker, daemon=True).start()
 
     def _poll(self):
         try:
             while True:
-                ok, value, out = self._events.get_nowait()
+                ok, value, out, preview, signature = self._events.get_nowait()
                 self._running = False
                 self.progress.stop()
                 self.run_button.state(["!disabled"])
+                self.preview_button.state(["!disabled"])
                 if ok:
                     report = value
                     for item in self.tree.get_children():
@@ -122,13 +152,24 @@ class DataContractAuditApp(tk.Tk):
                             finding.get("current", ""),
                         ))
                     s = report["summary"]
-                    self.status.set(
-                        f"監査完了: error={s['errors']} / warning={s['warnings']} / "
-                        f"info={s['info']}。新しい保存フォルダ: {out}"
-                    )
+                    if preview:
+                        self._preview_signature = signature
+                        self.status.set(
+                            f"試運転完了（ファイル保存なし）: errors={s['errors']}, "
+                            f"warnings={s['warnings']}, info={s['info']}。"
+                            "内容を確認して「確認してレポート保存」を押してください。"
+                        )
+                    else:
+                        self._preview_signature = None
+                        self.status.set(
+                            f"監査完了: errors={s['errors']}, warnings={s['warnings']}, "
+                            f"info={s['info']}。新しい保存先: {out}"
+                        )
                 else:
-                    self.status.set(f"監査失敗: {value}")
-                    messagebox.showerror("監査失敗", value)
+                    self._preview_signature = None
+                    self.status.set(f"監査失敗: {value}。ファイル形式・権限・容量を確認してください。")
+                    messagebox.showerror("監査失敗", str(value) + "\n\n"
+                                         "入力形式、ファイル破損、Key列、保存先の権限・容量を確認してください。")
         except queue.Empty:
             pass
         self.after(150, self._poll)
