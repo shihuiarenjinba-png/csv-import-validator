@@ -49,6 +49,29 @@ class PaidPreviewGateTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "nonempty"):
             load_table(self.a)
 
+    def test_excel_duplicate_headers_fail_closed(self):
+        from openpyxl import Workbook
+        output = Path(self.folder.name) / "duplicate.xlsx"
+        workbook = Workbook()
+        workbook.active.append(["account_id", "account_id"])
+        workbook.active.append(["001", "002"])
+        workbook.save(output)
+        workbook.close()
+        with self.assertRaisesRegex(ValueError, "duplicate headers"):
+            load_table(output)
+        self.assertTrue(output.is_file())
+
+    def test_excel_empty_header_fails_closed(self):
+        from openpyxl import Workbook
+        output = Path(self.folder.name) / "blank.xlsx"
+        workbook = Workbook()
+        workbook.active.append(["account_id", None, "amount"])
+        workbook.active.append(["001", "value", 100])
+        workbook.save(output)
+        workbook.close()
+        with self.assertRaisesRegex(ValueError, "nonempty"):
+            load_table(output)
+
     def test_oversized_input_is_refused_before_parsing(self):
         with self.a.open("wb") as target:
             target.truncate(100 * 1024 * 1024 + 1)
