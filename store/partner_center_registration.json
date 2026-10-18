@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "Data Contract and Schema Drift Auditor",
+  "repository": "csv-import-validator",
+  "branch": "codex/commercial-completion-20261018",
+  "appType": "MSIX_OR_PWA_APP",
+  "targetPackage": "MSIX",
+  "partnerCenterState": "CONDITIONAL_CANDIDATE_NEEDS_WINDOWS_QA",
+  "evidence": "Second-tier candidate. Reserve only with 3-month submission path and package tests.",
+  "recordedDate": "2026-10-18",
+  "storeIdentity": {
+    "storeId": null,
+    "packageIdentityName": null,
+    "packageIdentityPublisher": null,
+    "publisherDisplayName": null,
+    "packageFamilyName": null
+  },
+  "nameReservationDate": null,
+  "nameReservationExpiry": null,
+  "packageBuild": "NOT_VERIFIED",
+  "windowsE2e": "NOT_VERIFIED",
+  "wack": "NOT_VERIFIED",
+  "certificationSubmission": "NOT_AUTHORIZED",
+  "salesRelease": "HOLD"
+}
