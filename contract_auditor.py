@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import shutil
+import tempfile
+import uuid
 from datetime import datetime
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -228,29 +232,33 @@ def _safe_csv_value(value):
 
 
 def save_audit(report: dict, output_dir: str | Path) -> Path:
+    """Publish the full JSON/CSV/contract set, never a partial report."""
     base = Path(output_dir).expanduser().resolve()
     base.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    index = 0
-    while True:
-        suffix = f"_{index}" if index else ""
-        out = base / f"drift_audit_{stamp}{suffix}"
-        try:
-            out.mkdir()
-            break
-        except FileExistsError:
-            index += 1
-    findings = pd.DataFrame(report["findings"])
-    safe_findings = findings.apply(lambda column: column.map(_safe_csv_value))
-    escape_count = sum(
-        _safe_csv_value(value) != value
-        for finding in report["findings"] for value in finding.values()
-    )
-    output_report = {**report, "report_csv_formula_values_escaped": escape_count}
-    with (out / "data_drift_audit.json").open("x", encoding="utf-8") as file:
-        json.dump(output_report, file, ensure_ascii=False, indent=2)
-    with (out / "generated_contract.json").open("x", encoding="utf-8") as file:
-        json.dump(report["generated_contract"], file, ensure_ascii=False, indent=2)
-    safe_findings.to_csv(out / "data_drift_findings.csv", index=False,
-                         encoding="utf-8-sig", mode="x")
-    return out
+    out = base / f"drift_audit_{stamp}_{uuid.uuid4().hex[:12]}"
+    temporary = Path(tempfile.mkdtemp(dir=base, prefix='.pending_drift_'))
+    try:
+        expected_cols = ["severity", "code", "column", "message", "baseline", "current"]
+        findings = pd.DataFrame(report["findings"], columns=expected_cols)
+        safe_findings = findings.apply(lambda column: column.map(_safe_csv_value))
+        escape_count = sum(
+            _safe_csv_value(value) != value
+            for finding in report["findings"] for value in finding.values()
+        )
+        output_report = {**report, "report_csv_formula_values_escaped": escape_count}
+        with (temporary / "data_drift_audit.json").open("x", encoding="utf-8") as file:
+            json.dump(output_report, file, ensure_ascii=False, indent=2)
+        with (temporary / "generated_contract.json").open("x", encoding="utf-8") as file:
+            json.dump(report["generated_contract"], file, ensure_ascii=False, indent=2)
+        safe_findings.to_csv(temporary / "data_drift_findings.csv", index=False,
+                             encoding="utf-8-sig", mode="x")
+        for name in ("data_drift_audit.json", "generated_contract.json", "data_drift_findings.csv"):
+            file = temporary / name
+            if not file.is_file() or file.stat().st_size == 0:
+                raise ValueError(f"Incomplete audit output: {name}")
+        os.rename(temporary, out)
+        return out
+    finally:
+        if temporary.exists():
+            shutil.rmtree(temporary)
