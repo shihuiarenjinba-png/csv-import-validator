@@ -20,7 +20,7 @@ class PaidPreviewGateTests(unittest.TestCase):
     def test_same_inputs_approve_without_writing(self):
         first = input_revision(str(self.a), str(self.b), ["id"])
         self.assertEqual(first, input_revision(str(self.a), str(self.b), ["id"]))
-        self.assertEqual(list(Path(self.folder.name).iterdir()), [self.a, self.b])
+        self.assertEqual(set(Path(self.folder.name).iterdir()), {self.a, self.b})
 
     def test_mutation_with_same_file_size_invalidates_approval(self):
         first = input_revision(str(self.a), str(self.b), ["id"])
@@ -31,7 +31,6 @@ class PaidPreviewGateTests(unittest.TestCase):
         for baseline, current, keys in (
             (str(self.a), str(self.a), ["id"]),
             (str(self.a), str(self.b), ["id", "id"]),
-            (str(self.a), str(self.b), [] if False else ["id", "id"]),
         ):
             with self.subTest(base=baseline, keys=keys), self.assertRaises(ValueError):
                 input_revision(baseline, current, keys)
