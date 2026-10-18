@@ -10,5 +10,6 @@
   "entryPoint": "app.py",
   "partnerCenterRegistration": "NOT_CONFIRMED",
   "msixPackageStatus": "NOT_BUILT",
-  "notes": "Display name is a proposal until checked in Partner Center. Do not submit for certification."
+  "notes": "Display name is a proposal until checked in Partner Center. Do not submit for certification.",
+  "repository": "csv-import-validator"
 }
