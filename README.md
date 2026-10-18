@@ -67,3 +67,16 @@ data_contract_audit/
 - Excel複数Sheet比較
 - 監査履歴の時系列表示
 - Windows 10/11実機テスト、portable EXE、署名
+
+## 2026-10-19 有料商品としての品質強化（開発中・HOLD）
+
+`audit/paid-product-hardening-20261019` は、既存の商用準備ブランチとは別の監査ブランチです。
+- 対象製品: **Data Contract & Schema Drift Auditor**
+- 今回の強化: 試運転→確認→保存・SHA-256承認・CSV/XLSX重複ヘッダー拒否。これらに対応する異常系テストを追加しました。
+- 価格の仮説: **¥2,980（買い切り・国内税込、未承認）**。成熟した他社製品の公式掲載価格との比較に基づく**テスト候補値**であり、自社商品の購入実績に裏付けられた価格ではありません。
+- Store最終商品: **MSIXのみ**。検証用EXEは内部QA・パッケージ組立工程に限定し、Portable EXE/NSISを最終販売形式として採用しません。
+- **未完了のブロッカー**: 監査ブランチのWindows実機テスト、GUI/日英/表示倍率/破損データ・容量不足試験、正規Identity MSIX実物、WACK PASS、商用LICENSE/NOTICE/素材権利の承認、Store認定。
+- GitHub Actionsが0ステップで終了する場合はテスト**未実行**として記録し、ソース不合格や品質合格と扱わないでください。
+- 全19商品の価格根拠と合格ゲート: [GitHub品質計画](https://github.com/shihuiarenjinba-png/document-site/blob/audit/store-19-product-readiness-20261019/quality/PAID_19_PRODUCT_QUALITY_AND_PRICING_20261019.md)
+
+既存`main`とReleaseの変更・統合・販売公開は、独立QAを終えるまで行わないでください。
