@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import csv
 import math
 import os
 import shutil
@@ -24,13 +25,31 @@ class Finding:
     current: str = ""
 
 
+MAX_INPUT_BYTES = 50_000_000
+
+
+def _validate_csv_header(path: Path, encoding: str) -> None:
+    # pandas auto-renames duplicate headers (a,a -> a,a.1). That would
+    # hide schema corruption and produce misleading drift comparisons.
+    with path.open("r", encoding=encoding, newline="") as stream:
+        headers = next(csv.reader(stream), None)
+    if not headers or any(not h.strip() for h in headers):
+        raise ValueError("CSV must contain non-empty column names")
+    normalized = [name.strip() for name in headers]
+    if len(normalized) != len(set(normalized)):
+        raise ValueError("CSV contains duplicate or ambiguous column names")
+
+
 def load_table(path: str | Path, sheet_name: str | int = 0) -> pd.DataFrame:
     p = Path(path).expanduser().resolve()
     suffix = p.suffix.lower()
+    if not p.is_file() or p.stat().st_size > MAX_INPUT_BYTES:
+        raise ValueError("Input must be an existing regular file no larger than 50 MB")
     if suffix == ".csv":
         last_error = None
         for enc in ("utf-8-sig", "utf-8", "cp932", "shift_jis"):
             try:
+                _validate_csv_header(p, enc)
                 return pd.read_csv(p, encoding=enc, dtype=str, keep_default_na=False, na_values=[""])
             except UnicodeDecodeError as exc:
                 last_error = exc
