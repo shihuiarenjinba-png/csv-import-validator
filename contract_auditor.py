@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import math
 import os
@@ -26,11 +27,21 @@ class Finding:
 
 def load_table(path: str | Path, sheet_name: str | int = 0) -> pd.DataFrame:
     p = Path(path).expanduser().resolve()
+    if not p.is_file() or p.is_symlink():
+        raise ValueError("Select an existing regular file, not a link or folder")
+    if p.stat().st_size > 100 * 1024 * 1024:
+        raise ValueError("Input exceeds the verified 100 MiB limit")
     suffix = p.suffix.lower()
     if suffix == ".csv":
         last_error = None
         for enc in ("utf-8-sig", "utf-8", "cp932", "shift_jis"):
             try:
+                with p.open("r", encoding=enc, newline="") as stream:
+                    headers = next(csv.reader(stream, strict=True), [])
+                if not headers or any(not value.strip() for value in headers):
+                    raise ValueError("CSV headers must be nonempty and unique")
+                if len(set(headers)) != len(headers):
+                    raise ValueError("CSV contains duplicate headers; audit is refused")
                 return pd.read_csv(p, encoding=enc, dtype=str, keep_default_na=False, na_values=[""])
             except UnicodeDecodeError as exc:
                 last_error = exc
