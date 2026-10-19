@@ -4,6 +4,7 @@ on:
     branches:
       - 'codex/commercial-completion-20261018'
       - 'audit/paid-product-hardening-20261019'
+      - 'ui/simple-schema-key-picker-20261019'
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,6 +26,6 @@ jobs:
       - name: Run schema and validator unit tests
         run: python -m unittest discover -s tests -p 'test*.py' -v
       - name: Compile source and tests
-        run: python -m compileall -q app.py contract_auditor.py validator.py tests
+        run: python -m compileall -q app.py contract_auditor.py validator.py gui_schema_columns.py tests
       - name: Release hold
         run: echo "Human GUI, Windows installed package, data correctness review, and WACK not yet cleared."
