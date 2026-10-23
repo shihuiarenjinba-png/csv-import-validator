@@ -12,7 +12,7 @@ from contract_auditor import audit_drift, save_audit
 class DataContractAuditApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Data Contract & Schema Drift Auditor")
+        self.title("Data Contract Auditor")
         self.geometry("900x580")
         self.minsize(800, 500)
 
@@ -26,7 +26,7 @@ class DataContractAuditApp(tk.Tk):
 
         root = ttk.Frame(self, padding=16)
         root.pack(fill="both", expand=True)
-        ttk.Label(root, text="Data Contract & Schema Drift Auditor", font=("Segoe UI", 18, "bold")).pack(anchor="w")
+        ttk.Label(root, text="Data Contract Auditor", font=("Segoe UI", 18, "bold")).pack(anchor="w")
         ttk.Label(
             root,
             text="昨日と今日、旧エクスポートと新エクスポートなどを比較し、列・型・NULL率・分布・キー重複の変化を監査します。",
@@ -124,7 +124,7 @@ class DataContractAuditApp(tk.Tk):
                     s = report["summary"]
                     self.status.set(
                         f"監査完了: error={s['errors']} / warning={s['warnings']} / "
-                        f"info={s['info']}。新しい保存フォルダ: {out}"
+                        f"info={s['info']}。保存先: {Path(out).name}"
                     )
                 else:
                     self.status.set(f"監査失敗: {value}")
