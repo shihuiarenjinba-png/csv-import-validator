@@ -40,9 +40,19 @@ class StoreGateTests(unittest.TestCase):
             "partnerCenterState": "EXISTING_CONFIRMED",
             "certificationSubmission": "NOT_AUTHORIZED",
             "salesRelease": "HOLD",
-            "storeIdVerificationStatus": "USER_CONFIRMED_NOT_LIVE_VERIFIED",
+            "storeIdVerificationStatus": "PARTNER_CENTER_VERIFIED",
+            "identityFieldVerification": {
+                "storeId": "PARTNER_CENTER_VERIFIED",
+                "packageIdentityName": "PARTNER_CENTER_VERIFIED",
+                "packageIdentityPublisher": "PARTNER_CENTER_VERIFIED",
+                "publisherDisplayName": "PARTNER_CENTER_VERIFIED",
+                "packageFamilyName": "PARTNER_CENTER_VERIFIED",
+            },
+            "displayNameVerificationStatus": "PARTNER_CENTER_VERIFIED",
             "approvedStoreVersion": "1.0.0.0",
+            "approvedStoreVersionStatus": "OWNER_APPROVED",
             "manifestResources": ["en-US", "ja-JP"],
+            "manifestResourcesVerificationStatus": "OWNER_APPROVED",
             "storeIdentity": {
                 "storeId": "9PDL4ZWSB45P",
                 "packageIdentityName": "OkinawaDesktopTools.DataContractAuditor",
@@ -68,6 +78,32 @@ class StoreGateTests(unittest.TestCase):
         self._write_config()
         result = validate_config(self.root, "1.0.0.0")
         self.assertTrue(result["ready"], result["blockers"])
+
+    def test_user_confirmation_alone_never_authorizes_candidate(self):
+        self.registration["storeIdVerificationStatus"] = "USER_CONFIRMED_NOT_LIVE_VERIFIED"
+        self.registration["identityFieldVerification"]["storeId"] = "USER_CONFIRMED_NOT_LIVE_VERIFIED"
+        self._write_config()
+        result = validate_config(self.root)
+        self.assertFalse(result["ready"])
+        self.assertTrue(any("not independently verified" in x for x in result["blockers"]))
+
+    def test_unverified_identity_and_display_name_block_even_with_values(self):
+        self.registration["identityFieldVerification"]["packageIdentityName"] = "UNKNOWN"
+        self.registration["displayNameVerificationStatus"] = "UNKNOWN"
+        self._write_config()
+        result = validate_config(self.root)
+        self.assertFalse(result["ready"])
+        self.assertTrue(any("not live-verified: packageIdentityName" in x for x in result["blockers"]))
+        self.assertTrue(any("reserved DisplayName" in x for x in result["blockers"]))
+
+    def test_unapproved_version_and_languages_block_even_if_well_formed(self):
+        self.registration["approvedStoreVersionStatus"] = "UNKNOWN"
+        self.registration["manifestResourcesVerificationStatus"] = "UNKNOWN"
+        self._write_config()
+        result = validate_config(self.root)
+        self.assertFalse(result["ready"])
+        self.assertTrue(any("owner approval" in x for x in result["blockers"]))
+        self.assertTrue(any("owner-approved" in x for x in result["blockers"]))
 
     def test_missing_identity_and_unconfirmed_state_fail_closed(self):
         self.registration["storeIdentity"]["packageIdentityName"] = None
