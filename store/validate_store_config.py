@@ -71,19 +71,33 @@ def validate_config(root: Path, version: str | None = None) -> dict:
     store_id = identity.get("storeId")
     if not isinstance(store_id, str) or not STORE_ID_RE.fullmatch(store_id):
         blockers.append("A 12-character Store ID is required.")
-    if record.get("storeIdVerificationStatus") != "USER_CONFIRMED_NOT_LIVE_VERIFIED":
-        blockers.append("Store ID confirmation provenance is not recorded.")
+    if store_id != "9PDL4ZWSB45P":
+        blockers.append("Store ID does not match the designated Data Contract Auditor product slot.")
+    store_id_status = record.get("storeIdVerificationStatus")
+    if store_id_status != "PARTNER_CENTER_VERIFIED":
+        blockers.append("Store ID is not independently verified against the live Partner Center record.")
+    identity_status = record.get("identityFieldVerification")
+    if not isinstance(identity_status, dict):
+        identity_status = {}
+    if identity_status.get("storeId") != store_id_status:
+        blockers.append("Store ID verification provenance is inconsistent.")
     for field in IDENTITY_FIELDS:
         value = identity.get(field)
         if not isinstance(value, str) or not value.strip():
             blockers.append(f"Official Partner Center identity field is missing: {field}.")
         elif re.search(r"(?i)(example|placeholder|testidentity|yourname)", value):
             blockers.append(f"Sample/placeholder identity is not allowed: {field}.")
+        if identity_status.get(field) != "PARTNER_CENTER_VERIFIED":
+            blockers.append(f"Official Partner Center identity field is not live-verified: {field}.")
+    if record.get("displayNameVerificationStatus") != "PARTNER_CENTER_VERIFIED":
+        blockers.append("Exact reserved DisplayName is not live-verified in Partner Center.")
 
     approved_version = record.get("approvedStoreVersion")
     version_to_build = version if version and version.strip() else approved_version
     if not isinstance(approved_version, str) or not VERSION_RE.fullmatch(approved_version):
         blockers.append("approvedStoreVersion is missing or not an approved four-part version ending in .0.")
+    if record.get("approvedStoreVersionStatus") != "OWNER_APPROVED":
+        blockers.append("approvedStoreVersion has no recorded owner approval.")
     if version and version.strip() and version != approved_version:
         blockers.append("Requested version does not exactly match approvedStoreVersion.")
     if isinstance(version_to_build, str) and version_to_build:
@@ -95,6 +109,8 @@ def validate_config(root: Path, version: str | None = None) -> dict:
                 blockers.append("MSIX version components are outside the permitted range.")
 
     languages = record.get("manifestResources")
+    if record.get("manifestResourcesVerificationStatus") != "OWNER_APPROVED":
+        blockers.append("manifestResources are not recorded as owner-approved.")
     if not isinstance(languages, list) or not languages:
         blockers.append("manifestResources must contain explicitly approved package languages.")
     elif any(not isinstance(lang, str) or not LANGUAGE_RE.fullmatch(lang) for lang in languages):
