@@ -6,7 +6,7 @@
   "appType": "MSIX_OR_PWA_APP",
   "targetPackage": "MSIX",
   "partnerCenterState": "CONDITIONAL_CANDIDATE_NEEDS_WINDOWS_QA",
-  "evidence": "Store ID candidate was confirmed by the owner in chat on 2026-10-23; it was not live-verified in Partner Center in this task. Package Identity Name, Publisher, PublisherDisplayName, PFN, approved Store Version, approved logo assets, and Windows QA remain unconfirmed. Keep HOLD; do not submit for certification.",
+  "evidence": "Store ID 9PDL4ZWSB45P owner-confirmed in chat 2026-10-23, not live-verified. Exact reserved DisplayName, Package Identity Name, Publisher, PublisherDisplayName, PFN and Store version not confirmed. Formal MSIX packaging remains blocked; no submission, signing or sale.",
   "recordedDate": "2026-10-18",
   "storeIdentity": {
     "storeId": "9PDL4ZWSB45P",
@@ -31,5 +31,8 @@
     "packageFamilyName": "UNKNOWN"
   },
   "approvedStoreVersion": null,
-  "manifestResources": []
+  "manifestResources": [],
+  "displayNameVerificationStatus": "SOURCE_TITLE_NOT_PARTNER_CENTER_VERIFIED",
+  "approvedStoreVersionStatus": "UNKNOWN",
+  "manifestResourcesVerificationStatus": "UNKNOWN"
 }
