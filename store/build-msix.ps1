@@ -39,19 +39,28 @@ function Write-PreflightReport {
     }
     Write-Output ($Report | ConvertTo-Json -Depth 12)
 }
+# Verify repository, working branch, local/remote commit and clean tree before any writes.
+Set-Location -LiteralPath $Root
+$RemoteUrl = Invoke-GitText -GitArguments @("remote","get-url","origin")
+$Branch = Invoke-GitText -GitArguments @("branch","--show-current")
+$SourceSha = Invoke-GitText -GitArguments @("rev-parse","HEAD")
+$RemoteSha = Invoke-GitText -GitArguments @("rev-parse",("origin/" + $ExpectedBranch))
+$DirtyState = Invoke-GitText -GitArguments @("status","--porcelain","--untracked-files=all")
+if ($RemoteUrl -notmatch '(?i)github[.]com[:/]shihuiarenjinba-png/csv-import-validator(?:[.]git)?$') {
+    throw "Wrong origin repository; no files were changed."
+}
+if ($Branch -cne $ExpectedBranch) { throw "Wrong working branch: $Branch; expected $ExpectedBranch" }
+if ($SourceSha -notmatch "^[0-9a-f]{40}$" -or $RemoteSha -cne $SourceSha) {
+    throw "Local and remote HEAD must be the same full commit SHA."
+}
+if (-not [string]::IsNullOrWhiteSpace($DirtyState)) { throw "Uncommitted changes exist; no preflight or packaging writes allowed." }
+
+$ExtraBlockers = [System.Collections.Generic.List[string]]::new()
 $Stamp = (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + [Guid]::NewGuid().ToString("N").Substring(0,8)
 $OutputBase = Join-Path $Root "store-output"
 New-Item -ItemType Directory -Path $OutputBase -Force | Out-Null
 $PreflightDir = Join-Path $OutputBase ("preflight-" + $Stamp)
 New-Item -ItemType Directory -Path $PreflightDir -Force | Out-Null
-
-$ExtraBlockers = [System.Collections.Generic.List[string]]::new()
-$Branch = Invoke-GitText -GitArguments @("branch","--show-current")
-$SourceSha = Invoke-GitText -GitArguments @("rev-parse","HEAD")
-if ($Branch -cne $ExpectedBranch) { $ExtraBlockers.Add("Refusing to package from branch '$Branch'; expected '$ExpectedBranch'.") }
-if ($SourceSha -notmatch "^[0-9a-f]{40}$") { $ExtraBlockers.Add("Source HEAD is not a full Git commit SHA.") }
-$DirtyState = Invoke-GitText -GitArguments @("status","--porcelain")
-if (-not [string]::IsNullOrWhiteSpace($DirtyState)) { $ExtraBlockers.Add("Working tree has uncommitted changes; package build is blocked.") }
 
 $ValidationArgs = @($ValidatorPath,"--json")
 if (-not [string]::IsNullOrWhiteSpace($Version)) { $ValidationArgs += @("--version",$Version) }
