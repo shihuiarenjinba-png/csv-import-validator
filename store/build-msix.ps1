@@ -42,7 +42,15 @@ function Write-PreflightReport {
 # Verify repository, working branch, local/remote commit and clean tree before any writes.
 Set-Location -LiteralPath $Root
 $RemoteUrl = Invoke-GitText -GitArguments @("remote","get-url","origin")
-if ($RemoteUrl -notmatch '(?i)github[.]com[:/]shihuiarenjinba-png/csv-import-validator(?:[.]git)?if ($Branch -cne $ExpectedBranch) { throw "Wrong working branch: $Branch; expected $ExpectedBranch" }
+if ($RemoteUrl -notmatch '(?i)github[.]com[:/]shihuiarenjinba-png/csv-import-validator(?:[.]git)?$') {
+    throw "Wrong origin repository; no files were changed."
+}
+Invoke-GitText -GitArguments @("fetch","origin") | Out-Null
+$Branch = Invoke-GitText -GitArguments @("branch","--show-current")
+$SourceSha = Invoke-GitText -GitArguments @("rev-parse","HEAD")
+$RemoteSha = Invoke-GitText -GitArguments @("rev-parse",("origin/" + $ExpectedBranch))
+$DirtyState = Invoke-GitText -GitArguments @("status","--porcelain","--untracked-files=all")
+if ($Branch -cne $ExpectedBranch) { throw "Wrong working branch: $Branch; expected $ExpectedBranch" }
 if ($SourceSha -notmatch "^[0-9a-f]{40}$" -or $RemoteSha -cne $SourceSha) {
     throw "Local and remote HEAD must be the same full commit SHA."
 }
