@@ -27,7 +27,7 @@ class StoreGateTests(unittest.TestCase):
         assets.mkdir(parents=True)
         (self.root / "app.py").write_text("# fixture", encoding="utf-8")
         self.product = {
-            "displayName": "Data Contract and Schema Drift Auditor",
+            "displayName": "Data Contract Auditor",
             "exeName": "DataContractSchemaDrift",
             "appId": "DataContractSchemaDrift",
             "entryPoint": "app.py",
@@ -36,7 +36,7 @@ class StoreGateTests(unittest.TestCase):
         }
         self.registration = {
             "repository": "csv-import-validator",
-            "displayName": "Data Contract and Schema Drift Auditor",
+            "displayName": "Data Contract Auditor",
             "partnerCenterState": "EXISTING_CONFIRMED",
             "certificationSubmission": "NOT_AUTHORIZED",
             "salesRelease": "HOLD",
@@ -128,7 +128,7 @@ class StoreGateTests(unittest.TestCase):
         self.assertFalse(result["ready"])
         self.assertTrue(any("approval record" in x for x in result["blockers"]))
 
-    def _make_msix(self, path: Path, display_name: str = "Data Contract and Schema Drift Auditor"):
+    def _make_msix(self, path: Path, display_name: str = "Data Contract Auditor"):
         manifest = f'''<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10">
 <Identity Name="OkinawaDesktopTools.DataContractAuditor" Publisher="CN=TEST-ONLY" Version="1.0.0.0" ProcessorArchitecture="x64"/>
 <Properties><DisplayName>{display_name}</DisplayName><PublisherDisplayName>Test Publisher</PublisherDisplayName></Properties>
