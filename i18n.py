@@ -10,6 +10,13 @@ _CONTROLLERS = []
 _PATCHED = False
 
 TEXTS = {
+    "Show results:": ("Show results:", "表示する結果:"),
+    "重要度": ("Severity", "重要度"),
+    "種類": ("Type", "種類"),
+    "列": ("Column", "列"),
+    "内容": ("Details", "内容"),
+    "基準": ("Baseline", "基準"),
+    "今回": ("Current", "今回"),
     "Data Contract Auditor": ("Data Contract Auditor", "データ契約監査"),
     "昨日と今日、旧エクスポートと新エクスポートなどを比較し、列・型・NULL率・分布・キー重複の変化を監査します。":
         ("Compare baseline and current CSV/Excel files to review column, type, NULL-rate, distribution and duplicate-key changes.",
@@ -131,6 +138,9 @@ class LanguageController:
     def refresh(self):
         self.root.title(translate(self.original_title))
         self._refresh(self.root)
+        refresh_hook = getattr(self.root, "refresh_i18n", None)
+        if callable(refresh_hook):
+            refresh_hook()
         status_var = getattr(self.root, "status", None)
         if status_var is not None and hasattr(status_var, "get") and hasattr(status_var, "set"):
             current = status_var.get()
