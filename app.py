@@ -46,7 +46,8 @@ class DataContractAuditApp(tk.Tk):
             root,
             text="昨日と今日、旧エクスポートと新エクスポートなどを比較し、列・型・NULL率・分布・キー重複の変化を監査します。",
             wraplength=840,
-        ).pack(anchor="w", pady=(4, 14))
+        ).pack(anchor="w", pady=(4, 4))
+        ttk.Label(root, text="Local analysis — input files are read only.", wraplength=840).pack(anchor="w", pady=(0, 10))
 
         ttk.Label(
             root,
