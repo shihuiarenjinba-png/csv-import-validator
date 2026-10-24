@@ -126,7 +126,7 @@ class StoreGateTests(unittest.TestCase):
         self._write_config()
         result = validate_config(self.root, "1.0.0.0")
         self.assertFalse(result["ready"])
-        self.assertTrue(any("approval record" in x for x in result["blockers"]))
+        self.assertTrue(any("store/assets/approval.json" in x for x in result["blockers"]))
 
     def _make_msix(self, path: Path, display_name: str = "Data Contract Auditor"):
         manifest = f'''<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10">
