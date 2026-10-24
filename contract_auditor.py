@@ -276,6 +276,20 @@ def save_audit(report: dict, output_dir: str | Path) -> Path:
             file = temporary / name
             if not file.is_file() or file.stat().st_size == 0:
                 raise ValueError(f"Incomplete audit output: {name}")
+
+        # Re-open every published format before the atomic rename. A report that
+        # cannot be parsed again is not a successful audit output.
+        with (temporary / "data_drift_audit.json").open("r", encoding="utf-8") as file:
+            reread_report = json.load(file)
+        with (temporary / "generated_contract.json").open("r", encoding="utf-8") as file:
+            reread_contract = json.load(file)
+        reread_findings = pd.read_csv(temporary / "data_drift_findings.csv", encoding="utf-8-sig")
+        if reread_report.get("summary") != output_report.get("summary"):
+            raise ValueError("Audit JSON verification failed: summary changed after write.")
+        if reread_contract != report["generated_contract"]:
+            raise ValueError("Generated contract verification failed after write.")
+        if list(reread_findings.columns) != expected_cols or len(reread_findings) != len(findings):
+            raise ValueError("Audit CSV verification failed after write.")
         os.rename(temporary, out)
         return out
     finally:
