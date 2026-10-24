@@ -27,6 +27,8 @@ _CONTROLLERS = []
 _PATCHED = False
 
 TEXTS = {
+    "比較を開始": ("Start comparison", "比較を開始"),
+    "押すと2つのファイルを読み取り、変更点を下の一覧に表示します。元ファイルは変更しません。": ("Reads both files and shows the detected changes below. The original files are not modified.", "押すと2つのファイルを読み取り、変更点を下の一覧に表示します。元ファイルは変更しません。"),
     "Show results:": ("Show results:", "表示する結果:"),
     "重要度": ("Severity", "重要度"),
     "種類": ("Type", "種類"),
