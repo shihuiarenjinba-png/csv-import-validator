@@ -18,6 +18,8 @@ NS = {
     "uap": "http://schemas.microsoft.com/appx/manifest/uap/windows10",
 }
 
+EXPECTED_MIN_VERSION = "10.0.17763.0"
+
 
 def verify_msix(root: Path, msix: Path, version: str | None = None) -> dict:
     root = Path(root).resolve()
@@ -68,6 +70,14 @@ def verify_msix(root: Path, msix: Path, version: str | None = None) -> dict:
                     blockers.append("Package/Properties/DisplayName does not match canonical data.")
                 if publisher_node is None or not identity.get("publisherDisplayName") or publisher_node.text != identity.get("publisherDisplayName"):
                     blockers.append("Package/Properties/PublisherDisplayName does not match canonical data.")
+                dependency = manifest.find("m:Dependencies/m:TargetDeviceFamily", NS)
+                if dependency is None:
+                    blockers.append("Manifest TargetDeviceFamily is missing.")
+                else:
+                    if dependency.get("Name") != "Windows.Desktop":
+                        blockers.append("Manifest TargetDeviceFamily/@Name must be Windows.Desktop.")
+                    if dependency.get("MinVersion") != EXPECTED_MIN_VERSION:
+                        blockers.append("Manifest TargetDeviceFamily/@MinVersion does not match the approved packaging route.")
                 app = manifest.find("m:Applications/m:Application", NS)
                 if app is None:
                     blockers.append("Manifest Application element is missing.")
@@ -98,7 +108,7 @@ def verify_msix(root: Path, msix: Path, version: str | None = None) -> dict:
             "filename": msix.name,
             "size_bytes": msix.stat().st_size,
             "sha256": digest.hexdigest(),
-            "signature_status": "UNSIGNED_CANDIDATE_EXPECTED",
+            "signature_status": "QA_UNSIGNED_EXPECTED",
         }
     blockers = list(dict.fromkeys(blockers))
     return {
