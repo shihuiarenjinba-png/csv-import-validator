@@ -133,7 +133,7 @@ class StoreGateTests(unittest.TestCase):
 <Identity Name="OkinawaDesktopTools.DataContractAuditor" Publisher="CN=TEST-ONLY" Version="1.0.0.0" ProcessorArchitecture="x64"/>
 <Properties><DisplayName>{display_name}</DisplayName><PublisherDisplayName>Test Publisher</PublisherDisplayName></Properties>
 <Resources><Resource Language="en-US"/><Resource Language="ja-JP"/></Resources>
-<Applications><Application Id="DataContractSchemaDrift" Executable="App\\DataContractSchemaDrift.exe"><uap:VisualElements DisplayName="{display_name}" Description="Test" BackgroundColor="transparent" Square150x150Logo="Assets/Square150x150Logo.png" Square44x44Logo="Assets/Square44x44Logo.png"/></Application></Applications>
+<Dependencies><TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0"/></Dependencies>\n<Applications><Application Id="DataContractSchemaDrift" Executable="App\\DataContractSchemaDrift.exe"><uap:VisualElements DisplayName="{display_name}" Description="Test" BackgroundColor="transparent" Square150x150Logo="Assets/Square150x150Logo.png" Square44x44Logo="Assets/Square44x44Logo.png"/></Application></Applications>
 </Package>'''
         with zipfile.ZipFile(path, "w") as archive:
             archive.writestr("AppxManifest.xml", manifest)
@@ -147,6 +147,22 @@ class StoreGateTests(unittest.TestCase):
         self._make_msix(package)
         result = verify_msix(self.root, package)
         self.assertTrue(result["valid"], result["blockers"])
+
+    def test_msix_wrong_min_version_is_rejected(self):
+        self._write_config()
+        package = self.root / "fixture.msix"
+        self._make_msix(package)
+        with zipfile.ZipFile(package, "r") as archive:
+            entries = {name: archive.read(name) for name in archive.namelist()}
+        manifest = entries["AppxManifest.xml"].decode("utf-8").replace(
+            'MinVersion="10.0.17763.0"', 'MinVersion="10.0.19041.0"'
+        )
+        with zipfile.ZipFile(package, "w") as archive:
+            for name, data in entries.items():
+                archive.writestr(name, manifest if name == "AppxManifest.xml" else data)
+        result = verify_msix(self.root, package)
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("MinVersion" in x for x in result["blockers"]))
 
     def test_msix_wrong_display_name_is_rejected(self):
         self._write_config()
