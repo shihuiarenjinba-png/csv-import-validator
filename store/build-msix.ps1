@@ -234,17 +234,15 @@ Write-Output "SALES_RELEASE=HOLD"
         if ([string]::IsNullOrWhiteSpace([string]$Identity.$FieldName)) {
             throw "QA_UNSIGNED identity value is missing: $FieldName"
         }
-    }
-    foreach ($FieldName in @('storeId','packageIdentityName','packageIdentityPublisher','publisherDisplayName','packageFamilyName')) {
         if ($Registration.identityFieldVerification.$FieldName -cne 'PARTNER_CENTER_VERIFIED') {
             throw "QA_UNSIGNED identity field is not Partner Center verified: $FieldName"
         }
     }
-    $PackageVersion = $Version
-    $PackageLanguages = @('en-US','ja-JP')
     if ([string]::IsNullOrWhiteSpace($AssetsDirectory) -or -not (Test-Path -LiteralPath $AssetsDirectory -PathType Container)) {
         throw 'QA_UNSIGNED requires a temporary package assets directory.'
     }
+    $PackageVersion = $Version
+    $PackageLanguages = @('en-US','ja-JP')
     $PackageAssetsDirectory = (Resolve-Path -LiteralPath $AssetsDirectory).Path
     Write-Host 'QA_UNSIGNED_MODE=TRUE'
     Write-Host 'STORE_SUBMISSION_AUTHORIZED=FALSE'
