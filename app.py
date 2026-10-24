@@ -7,6 +7,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from contract_auditor import audit_drift, save_audit
+from ui_desktop import bind_shortcuts, restore_window_state, save_window_state
 
 
 class DataContractAuditApp(tk.Tk):
@@ -15,6 +16,7 @@ class DataContractAuditApp(tk.Tk):
         self.title("Data Contract Auditor")
         self.geometry("900x580")
         self.minsize(800, 500)
+        restore_window_state(self, "DataContractAuditor", min_width=800, min_height=500)
 
         self.baseline = tk.StringVar()
         self.current = tk.StringVar()
@@ -70,6 +72,18 @@ class DataContractAuditApp(tk.Tk):
         self.tree.pack(fill="both", expand=True)
         self.after(150, self._poll)
         self.protocol("WM_DELETE_WINDOW", self._close)
+        self.baseline.trace_add("write", lambda *_: self._refresh_actions())
+        self.current.trace_add("write", lambda *_: self._refresh_actions())
+        bind_shortcuts(self, {
+            "<Control-Return>": self.run_audit,
+            "<F5>": self.run_audit,
+            "<Control-Shift-S>": self._pick_output,
+        })
+        self._refresh_actions()
+
+    def _refresh_actions(self):
+        ready = bool(self.baseline.get().strip() and self.current.get().strip()) and not self._running
+        self.run_button.state(["!disabled"] if ready else ["disabled"])
 
     def _path_row(self, parent, label, variable, command):
         row = ttk.Frame(parent)
@@ -102,7 +116,7 @@ class DataContractAuditApp(tk.Tk):
         keys = [x.strip() for x in self.keys.get().split(",") if x.strip()]
         output_dir = self.output_dir.get()
         self._running = True
-        self.run_button.state(["disabled"])
+        self._refresh_actions()
         self.progress.start(15)
         self.status.set("解析中です。元データは変更しません。")
 
@@ -121,7 +135,7 @@ class DataContractAuditApp(tk.Tk):
                 ok, value, out = self._events.get_nowait()
                 self._running = False
                 self.progress.stop()
-                self.run_button.state(["!disabled"])
+                self._refresh_actions()
                 if ok:
                     report = value
                     for item in self.tree.get_children():
@@ -148,6 +162,7 @@ class DataContractAuditApp(tk.Tk):
         if self._running:
             messagebox.showwarning("処理中", "監査が完了するまではウィンドウを閉じないでください。")
             return
+        save_window_state(self, "DataContractAuditor")
         self.destroy()
 
 
