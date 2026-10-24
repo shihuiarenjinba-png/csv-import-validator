@@ -33,6 +33,17 @@ class DataContractAuditApp(tk.Tk):
             wraplength=840,
         ).pack(anchor="w", pady=(4, 14))
 
+        ttk.Label(
+            root,
+            text="① 基準と今回を選択  →  ② Key列は必要な場合だけ指定  →  ③ 比較結果を確認",
+            font=("Segoe UI", 10, "bold"),
+            wraplength=840,
+        ).pack(anchor="w", pady=(0, 3))
+        ttk.Label(
+            root,
+            text="元ファイルは変更しません。結果は指定した出力先へ保存します。",
+            wraplength=840,
+        ).pack(anchor="w", pady=(0, 10))
         self._path_row(root, "Baseline", self.baseline, lambda: self._pick(self.baseline))
         self._path_row(root, "Current", self.current, lambda: self._pick(self.current))
         self._path_row(root, "出力先", self.output_dir, self._pick_output)
@@ -141,4 +152,8 @@ class DataContractAuditApp(tk.Tk):
 
 
 if __name__ == "__main__":
-    DataContractAuditApp().mainloop()
+    from i18n import install_bilingual_ui
+
+    app = DataContractAuditApp()
+    install_bilingual_ui(app)
+    app.mainloop()
