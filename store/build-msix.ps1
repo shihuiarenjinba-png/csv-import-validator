@@ -150,7 +150,7 @@ Set-Content -LiteralPath (Join-Path $Stage "AppxManifest.xml") -Value $Manifest 
 $SdkRoot = Join-Path ([Environment]::GetFolderPath("ProgramFilesX86")) "Windows Kits\10\bin"
 $MakeAppx = Get-ChildItem -Path $SdkRoot -Filter "makeappx.exe" -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.DirectoryName -match "\\x64$" } | Sort-Object -Property FullName -Descending | Select-Object -First 1
 if (-not $MakeAppx) { throw "Windows SDK x64 makeappx.exe not found." }
-$PackagePath = Join-Path $OutputRoot ("DataContractSchemaDrift_" + $PackageVersion + "_x64.msix")
+$PackagePath = Join-Path $OutputRoot ("DataContractSchemaDrift_QA_UNSIGNED_" + $PackageVersion + "_x64.msix")
 if (Test-Path -LiteralPath $PackagePath) { throw "Refusing to overwrite existing MSIX: $PackagePath" }
 & $MakeAppx.FullName pack /d $Stage /p $PackagePath
 if ($LASTEXITCODE -ne 0) { throw "MakeAppx pack failed." }
@@ -189,7 +189,7 @@ $Evidence = [ordered]@{
     msix_sha256 = $MsixHash
     msix_version = $PackageVersion
     processor_architecture = "x64"
-    signature_status = "UNSIGNED_CANDIDATE"
+    signature_status = "QA_UNSIGNED"
     certification_submission = "NOT_AUTHORIZED"
     sales_release = "HOLD"
     created_utc = [DateTime]::UtcNow.ToString("o")
@@ -197,10 +197,10 @@ $Evidence = [ordered]@{
 $Evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $OutputRoot "BUILD_EVIDENCE.json") -Encoding UTF8
 $Verification | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $OutputRoot "MSIX_VERIFICATION.json") -Encoding UTF8
 $Report | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $OutputRoot "STORE_PREFLIGHT.json") -Encoding UTF8
-Write-Output "MSIX_CANDIDATE_CREATED=$PackagePath"
+Write-Output "QA_UNSIGNED_MSIX_CREATED=$PackagePath"
 Write-Output "SOURCE_SHA=$SourceSha"
 Write-Output "EXE_SHA256=$ExeHash"
 Write-Output "MSIX_SHA256=$MsixHash"
-Write-Output "SIGNATURE_STATUS=UNSIGNED_CANDIDATE"
+Write-Output "SIGNATURE_STATUS=QA_UNSIGNED"
 Write-Output "CERTIFICATION_SUBMISSION=NOT_AUTHORIZED"
 Write-Output "SALES_RELEASE=HOLD"
