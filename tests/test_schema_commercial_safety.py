@@ -19,7 +19,7 @@ class SchemaCommercialSafetyTests(unittest.TestCase):
             self.assertTrue(frame["description"].isna().iloc[1])
 
     def test_duplicate_and_empty_headers_are_blocked(self):
-        bad = ("id,id\\n1,2\\n", "id, id \\n1,2\\n", "id,  \\n1,2\\n")
+        bad = ("id,id\n1,2\n", "id, id \n1,2\n", "id,  \n1,2\n")
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "bad.csv"
             for raw in bad:
