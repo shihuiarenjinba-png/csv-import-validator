@@ -17,11 +17,11 @@ jobs:
       approved_version: ${{ steps.preflight.outputs.approved_version }}
     steps:
       - name: Checkout dedicated work branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - name: Validate PowerShell syntax before build
@@ -54,7 +54,7 @@ jobs:
         run: ./store/build-msix.ps1 -PreflightOnly
       - name: Preserve preflight report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: data-contract-store-preflight-${{ github.run_id }}
           path: store-output/**
@@ -67,11 +67,11 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout dedicated work branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - name: Generate QA-only placeholder package logos
@@ -111,7 +111,7 @@ jobs:
           Write-Host "QA_UNSIGNED_VERSION=$qaVersion"
           Write-Host 'STORE_SUBMISSION_AUTHORIZED=FALSE'
       - name: Preserve QA-only MSIX and hash evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: data-contract-QA_UNSIGNED-validation-msix-${{ github.run_id }}-${{ github.run_attempt }}
           path: store-output/**
@@ -124,18 +124,18 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout dedicated work branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - name: Build, pack, unpack, and verify the unsigned MSIX
         shell: pwsh
         run: ./store/build-msix.ps1 -Version "${{ needs.regression-preflight.outputs.approved_version }}"
       - name: Preserve MSIX candidate and hash evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: data-contract-QA_UNSIGNED-msix-${{ github.run_id }}
           path: store-output/**
