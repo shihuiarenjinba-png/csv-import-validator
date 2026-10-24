@@ -9,6 +9,7 @@ from tkinter import filedialog, messagebox, ttk
 from contract_auditor import audit_drift, save_audit
 from i18n import translate
 from ui_desktop import bind_shortcuts, restore_window_state, save_window_state
+from ui_commandbar import CommandBar
 
 
 class DataContractAuditApp(tk.Tk):
@@ -28,6 +29,15 @@ class DataContractAuditApp(tk.Tk):
         self._findings: list[dict] = []
         self._events = queue.Queue()
         self._running = False
+
+        self.command_bar = CommandBar(self)
+        self.command_bar.pack(fill="x", side="top")
+        self.command_bar.add_command("baseline", "▣", "Baseline", lambda: self._pick(self.baseline))
+        self.command_bar.add_command("current", "▣", "Current", lambda: self._pick(self.current))
+        self.command_bar.add_command("output", "⌂", "Output", self._pick_output)
+        self.command_bar.add_separator()
+        self.command_bar.add_command("compare", "▶", "Compare", self.run_audit, primary=True, enabled=False)
+        self.command_bar.add_spacer()
 
         root = ttk.Frame(self, padding=16)
         root.pack(fill="both", expand=True)
@@ -49,9 +59,9 @@ class DataContractAuditApp(tk.Tk):
             text="元ファイルは変更しません。結果は指定した出力先へ保存します。",
             wraplength=840,
         ).pack(anchor="w", pady=(0, 10))
-        self._path_row(root, "Baseline", self.baseline, lambda: self._pick(self.baseline))
-        self._path_row(root, "Current", self.current, lambda: self._pick(self.current))
-        self._path_row(root, "出力先", self.output_dir, self._pick_output)
+        self._path_row(root, "Baseline", self.baseline)
+        self._path_row(root, "Current", self.current)
+        self._path_row(root, "出力先", self.output_dir)
 
         row = ttk.Frame(root)
         row.pack(fill="x", pady=5)
@@ -59,9 +69,7 @@ class DataContractAuditApp(tk.Tk):
         ttk.Entry(row, textvariable=self.keys).pack(side="left", fill="x", expand=True)
         ttk.Label(row, text=" 例: customer_id,date").pack(side="left")
 
-        self.run_button = ttk.Button(root, text="比較を開始", command=self.run_audit)
-        self.run_button.pack(anchor="w", pady=(12, 2))
-        ttk.Label(root, text="押すと2つのファイルを読み取り、変更点を下の一覧に表示します。元ファイルは変更しません。", wraplength=840).pack(anchor="w", pady=(0, 8))
+        ttk.Label(root, text="上の Compare を押すと2つのファイルを読み取り、変更点を下の一覧に表示します。元ファイルは変更しません。", wraplength=840).pack(anchor="w", pady=(8, 8))
         self.progress = ttk.Progressbar(root, mode="indeterminate")
         self.progress.pack(fill="x", pady=4)
         ttk.Label(root, textvariable=self.status, wraplength=840).pack(anchor="w", pady=(0, 6))
@@ -113,14 +121,13 @@ class DataContractAuditApp(tk.Tk):
 
     def _refresh_actions(self):
         ready = bool(self.baseline.get().strip() and self.current.get().strip()) and not self._running
-        self.run_button.state(["!disabled"] if ready else ["disabled"])
+        self.command_bar.set_enabled("compare", ready)
 
-    def _path_row(self, parent, label, variable, command):
+    def _path_row(self, parent, label, variable):
         row = ttk.Frame(parent)
         row.pack(fill="x", pady=5)
         ttk.Label(row, text=label, width=10).pack(side="left")
-        ttk.Entry(row, textvariable=variable).pack(side="left", fill="x", expand=True, padx=(0, 8))
-        ttk.Button(row, text="選択", command=command).pack(side="left")
+        ttk.Entry(row, textvariable=variable, state="readonly").pack(side="left", fill="x", expand=True)
 
     def _pick(self, variable):
         path = filedialog.askopenfilename(filetypes=[("CSV / Excel", "*.csv *.xlsx *.xlsm"), ("All", "*.*")])
