@@ -59,8 +59,9 @@ class DataContractAuditApp(tk.Tk):
         ttk.Entry(row, textvariable=self.keys).pack(side="left", fill="x", expand=True)
         ttk.Label(row, text=" 例: customer_id,date").pack(side="left")
 
-        self.run_button = ttk.Button(root, text="Schema Drift監査を実行", command=self.run_audit)
-        self.run_button.pack(anchor="w", pady=(12, 8))
+        self.run_button = ttk.Button(root, text="比較を開始", command=self.run_audit)
+        self.run_button.pack(anchor="w", pady=(12, 2))
+        ttk.Label(root, text="押すと2つのファイルを読み取り、変更点を下の一覧に表示します。元ファイルは変更しません。", wraplength=840).pack(anchor="w", pady=(0, 8))
         self.progress = ttk.Progressbar(root, mode="indeterminate")
         self.progress.pack(fill="x", pady=4)
         ttk.Label(root, textvariable=self.status, wraplength=840).pack(anchor="w", pady=(0, 6))
