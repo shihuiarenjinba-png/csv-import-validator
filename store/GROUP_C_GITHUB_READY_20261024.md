@@ -1,71 +1,69 @@
-# Group C — GitHub completion / code-owner handoff
+# Group C — GitHub technical completion / code-owner handoff
 
 Date: 2026-10-24  
 Product: **Data Contract Auditor**  
-Repository: `shihuiarenjinba-png/csv-import-validator`  
-Work branch: `codex/store-p0-data-contract-20261023`  
-Code HEAD before this handoff-document commit: `c00c8edcdab997ce5ec72a3480693b78755b8086`
+Repository: `shihuiarenjinba-png/csv-import-validator`
+
+## Git provenance
+- Source branch: `audit/store-release-hardening-20261019`
+- Source HEAD: `a259daa804f214c5453aab7b971372cc543dac3b`
+- Work branch: `codex/store-p0-data-contract-20261023`
+- Validated implementation HEAD before this documentation commit: `4ea8a08726c3abb5acd0c8575cd0f1230aa93922`
+- Source comparison at implementation HEAD: **behind 0**
 
 ## Store identity evidence
-
-- Store reserved DisplayName: `Data Contract Auditor`
 - Store ID: `9PDL4ZWSB45P`
 - Package Identity Name: `OkinawaDesktopTools.DataContractAuditor`
 - Publisher: `CN=46263F21-A700-41DB-8C9B-114C22FB82FC`
 - PublisherDisplayName: `Okinawa Desktop Tools`
-- Evidence: owner-provided Microsoft Partner Center **View product identity** screenshot shared in this conversation.
-- Store Version: **UNKNOWN / HOLD**. Do not infer a value from historical builder defaults.
+- Evidence: owner-provided Partner Center **View product identity** screenshot.
+- Store Version: **UNKNOWN / HOLD**. No builder default is treated as an approved Store version.
 
-## GitHub-side work completed
+## Completed GitHub-side technical work
+- Store-facing UI reviewed and hardened; normal UI does not intentionally expose HOLD/debug/branch/placeholder metadata.
+- Existing packaging route preserved.
+- Exact Git origin / branch / local-vs-origin HEAD / dirty gate is enforced by the builder.
+- Source commit is embedded as `SOURCE_GIT_COMMIT.txt`.
+- Unsigned package and artifact naming is explicitly **QA_UNSIGNED**.
+- Generated/unpacked Manifest route verifies:
+  - Identity Name
+  - Publisher
+  - DisplayName
+  - Version
+  - ProcessorArchitecture = x64
+  - TargetDeviceFamily MinVersion = `10.0.17763.0`
+  - Application ID = `DataContractSchemaDrift`
+  - Executable = `App\\DataContractSchemaDrift.exe`
+- MSIX SHA-256 and source commit are recorded by the existing packaging route when a package is actually produced.
+- No signing, certificate-store change, Defender/SmartScreen/security-policy change, Partner Center upload, certification submission, or publication was performed.
+- Repository search found **no existing MSIXUPLOAD generation route**; no new packaging system was invented.
 
-- Store identity metadata updated on this work branch.
-- Existing MSIX builder structure preserved and hardened with repository/origin/fetch/branch/local-vs-origin HEAD/dirty checks.
-- MSIX candidate source commit is embedded as `SOURCE_GIT_COMMIT.txt`.
-- Unpacked manifest path verifies Identity Name, Publisher, Version, x64, PublisherDisplayName and Store DisplayName before success.
-- Old implicit `1.0.0.0` Store-version default is not accepted where it previously existed.
-- UI-only improvements were kept separate from processing logic, with Store-name/layout/path-privacy changes where applicable.
-- No `main` / `release` merge was performed.
-- No certificate, signing, Defender, certificate-store or OS-security setting changes were performed.
-- No Partner Center upload, certification submission or publish action was performed.
+## Tests
+Local reproduction: **12 tests / 12 PASS / 0 FAIL / 0 ERROR / 0 SKIP**. GitHub Actions tests: **NOT RUN** because no runner was assigned.
 
-Build entry: `store/build-msix.ps1`
+## Latest Windows GitHub Actions associated with the implementation HEAD
+- Run ID: `40046762289`
+- Jobs: regression-preflight `120730166140`: runner=null / steps=0 / failure; build-unsigned-candidate `120730178580`: steps=0 / skipped
+- Logs: **unavailable (BlobNotFound / no job execution)**
+- Artifacts: **none**
+- Result classification: **NOT RUN**, not PASS.
 
-Store reserved name differs from historical repository/UI title; current branch has been aligned to the Store reserved name.
+## Package status
+- QA_UNSIGNED MSIX: **NOT CREATED**
+- MSIXUPLOAD: **NO EXISTING ROUTE**
+- Manifest from generated package: **NOT AVAILABLE because no MSIX artifact exists**
+- MSIX filename / size / SHA-256: **NOT AVAILABLE**
+- Windows 11 real-device QA: **NOT RUN**
+- Windows 10 secondary QA: **NOT RUN**
 
-## Latest GitHub Actions evidence
+## Remaining gates
+1. Record an authoritative package/Store Version in `A.B.C.0` form without inference.
+2. Commit owner-approved product artwork in the existing asset location/gate.
+3. Restore GitHub Actions runner execution for this private repository/account, or run the existing Windows build route on the later code-owner Windows machine.
+4. Generate the QA_UNSIGNED MSIX, then preserve actual filename, size, SHA-256, source commit and unpacked Manifest values.
+5. Perform Windows 11 x64 UI/functional QA; Windows 10 x64 is secondary compatibility QA.
 
-- Run ID: `40027332917`
-- Jobs: 120666689090 regression-preflight steps=0 failure; 120666710547 build-unsigned-candidate skipped
-- Runner: **not assigned**
-- Executed steps: **0**
-- Result must be reported as **NOT RUN**, not test PASS.
-- MSIX artifact: **none verified**
-- MSIX size / SHA-256: **UNKNOWN**
-- Windows UI/functional QA: **NOT RUN**
+## Current sales-preparation judgement
+**TECHNICAL SOURCE / UI / PACKAGING ROUTE READY — ACTUAL MSIX + WINDOWS QA + STORE SUBMISSION HOLD**
 
-## Remaining HOLD gates before code-owner upload handoff
-
-1. Obtain and record the product-specific approved Store Version in `A.B.C.0` form.
-2. Provide approved Store logo assets and verified resource languages.
-3. On a real Windows x64 repository clone, run the common 10-command Git start gate and confirm clean local HEAD == `origin/codex/store-p0-data-contract-20261023`.
-4. Run existing unit/smoke tests and portable EXE build; record commands, exit codes, test counts and EXE SHA-256.
-5. Run the existing unsigned MSIX builder and preserve package path, size, SHA-256, source commit and unpacked manifest evidence.
-6. Run real Windows UI QA, including 1024x768 and DPI checks, with non-personal test data.
-7. Only after those gates pass should the code owner prepare the Partner Center package-upload step. Upload/submission/publication remain outside this instruction.
-
-## Code-owner start commands
-
-```text
-git rev-parse --show-toplevel
-git config --get remote.origin.url
-git fetch origin
-git branch --show-current
-git status --short
-git rev-parse HEAD
-git rev-parse "origin/codex/store-p0-data-contract-20261023"
-git log --oneline --decorate -8
-git diff --name-status
-git ls-files --others --exclude-standard
-```
-
-If the repository/remote/branch is wrong, the tree is dirty, or local/origin HEAD cannot be explained, stop without reset, discard or stash.
+The HOLD is not a claim that the product code is incomplete. It records the specific unexecuted packaging/runtime gates above.
