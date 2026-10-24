@@ -19,8 +19,8 @@ class BuilderSourceSafetyTests(unittest.TestCase):
 
     def test_single_candidate_builder(self):
         self.assertEqual(self.script.count("[CmdletBinding()]"), 1)
-        self.assertEqual(self.script.count("MSIX_CANDIDATE_CREATED"), 1)
-        self.assertEqual(self.script.count("SIGNATURE_STATUS=UNSIGNED_CANDIDATE"), 1)
+        self.assertEqual(self.script.count("QA_UNSIGNED_MSIX_CREATED"), 1)
+        self.assertEqual(self.script.count("SIGNATURE_STATUS=QA_UNSIGNED"), 1)
 
     def test_origin_branch_commit_and_clean_worktree_before_outputs(self):
         text = self.script
@@ -43,6 +43,7 @@ class BuilderSourceSafetyTests(unittest.TestCase):
         self.assertIn("Unpacked MSIX", text)
         self.assertIn("Get-FileHash", text)
         self.assertIn("MSIX_BUILD_BLOCKED", text)
+        self.assertIn("QA_UNSIGNED", text)
         self.assertNotIn("SignTool.exe", text)
         self.assertNotIn("New-SelfSignedCertificate", text)
 
