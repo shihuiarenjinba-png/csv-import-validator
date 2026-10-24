@@ -7,6 +7,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from contract_auditor import audit_drift, save_audit
+from i18n import translate
 from ui_desktop import bind_shortcuts, restore_window_state, save_window_state
 
 
@@ -23,6 +24,8 @@ class DataContractAuditApp(tk.Tk):
         self.keys = tk.StringVar()
         self.output_dir = tk.StringVar(value=str(Path.cwd() / "data_contract_audit"))
         self.status = tk.StringVar(value="基準ファイルと今回ファイルを選択してください。")
+        self.severity_filter = tk.StringVar(value="ALL")
+        self._findings: list[dict] = []
         self._events = queue.Queue()
         self._running = False
 
@@ -60,14 +63,23 @@ class DataContractAuditApp(tk.Tk):
         self.run_button.pack(anchor="w", pady=(12, 8))
         self.progress = ttk.Progressbar(root, mode="indeterminate")
         self.progress.pack(fill="x", pady=4)
-        ttk.Label(root, textvariable=self.status, wraplength=840).pack(anchor="w", pady=(0, 10))
+        ttk.Label(root, textvariable=self.status, wraplength=840).pack(anchor="w", pady=(0, 6))
+        filter_row = ttk.Frame(root)
+        filter_row.pack(fill="x", pady=(0, 6))
+        ttk.Label(filter_row, text="Show results:").pack(side="left")
+        severity = ttk.Combobox(filter_row, state="readonly", width=12,
+                                textvariable=self.severity_filter,
+                                values=("ALL", "ERROR", "WARNING", "INFO"))
+        severity.pack(side="left", padx=(6, 0))
+        severity.bind("<<ComboboxSelected>>", lambda _event: self._render_findings())
 
         self.tree = ttk.Treeview(root, columns=("severity", "code", "column", "message", "baseline", "current"), show="headings", height=15)
-        for key, title, width in [
-            ("severity", "重要度", 75), ("code", "種類", 190), ("column", "列", 140),
-            ("message", "内容", 300), ("baseline", "基準", 90), ("current", "今回", 90),
-        ]:
-            self.tree.heading(key, text=title)
+        self._tree_titles = {
+            "severity": ("重要度", 75), "code": ("種類", 190), "column": ("列", 140),
+            "message": ("内容", 300), "baseline": ("基準", 90), "current": ("今回", 90),
+        }
+        for key, (title, width) in self._tree_titles.items():
+            self.tree.heading(key, text=translate(title))
             self.tree.column(key, width=width, anchor="w")
         self.tree.pack(fill="both", expand=True)
         self.after(150, self._poll)
@@ -80,6 +92,23 @@ class DataContractAuditApp(tk.Tk):
             "<Control-Shift-S>": self._pick_output,
         })
         self._refresh_actions()
+
+    def refresh_i18n(self):
+        for key, (title, _width) in self._tree_titles.items():
+            self.tree.heading(key, text=translate(title))
+
+    def _render_findings(self):
+        selected = self.severity_filter.get().lower()
+        findings = self._findings if selected == "all" else [
+            item for item in self._findings if str(item.get("severity", "")).lower() == selected
+        ]
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        for finding in findings[:1000]:
+            self.tree.insert("", "end", values=(
+                finding["severity"], finding["code"], finding["column"],
+                finding["message"], finding.get("baseline", ""), finding.get("current", ""),
+            ))
 
     def _refresh_actions(self):
         ready = bool(self.baseline.get().strip() and self.current.get().strip()) and not self._running
@@ -138,14 +167,8 @@ class DataContractAuditApp(tk.Tk):
                 self._refresh_actions()
                 if ok:
                     report = value
-                    for item in self.tree.get_children():
-                        self.tree.delete(item)
-                    for finding in report["findings"][:1000]:
-                        self.tree.insert("", "end", values=(
-                            finding["severity"], finding["code"], finding["column"],
-                            finding["message"], finding.get("baseline", ""),
-                            finding.get("current", ""),
-                        ))
+                    self._findings = list(report["findings"])
+                    self._render_findings()
                     s = report["summary"]
                     self.status.set(
                         f"監査完了: error={s['errors']} / warning={s['warnings']} / "
