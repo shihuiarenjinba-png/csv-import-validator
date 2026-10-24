@@ -27,6 +27,7 @@ _CONTROLLERS = []
 _PATCHED = False
 
 TEXTS = {
+    "Local analysis — input files are read only.": ("Local analysis — input files are read only.", "ローカル解析 — 入力ファイルは読み取りのみで、変更しません。"),
     "Output": ("Output", "出力先"),
     "Compare": ("Compare", "比較"),
     "上の Compare を押すと2つのファイルを読み取り、変更点を下の一覧に表示します。元ファイルは変更しません。": ("上の Compare を押すと2つのファイルを読み取り、変更点を下の一覧に表示します。元ファイルは変更しません。", "Press Compare above to read both files and show detected changes below. The original files are not modified."),
