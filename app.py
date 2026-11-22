@@ -60,9 +60,9 @@ class DataContractAuditApp(tk.Tk):
             text="元ファイルは変更しません。結果は指定した出力先へ保存します。",
             wraplength=840,
         ).pack(anchor="w", pady=(0, 10))
-        self._path_row(root, "Baseline", self.baseline)
-        self._path_row(root, "Current", self.current)
-        self._path_row(root, "出力先", self.output_dir)
+        self._path_row(root, "Baseline", self.baseline, lambda: self._pick(self.baseline))
+        self._path_row(root, "Current", self.current, lambda: self._pick(self.current))
+        self._path_row(root, "出力先", self.output_dir, self._pick_output)
 
         row = ttk.Frame(root)
         row.pack(fill="x", pady=5)
@@ -124,11 +124,13 @@ class DataContractAuditApp(tk.Tk):
         ready = bool(self.baseline.get().strip() and self.current.get().strip()) and not self._running
         self.command_bar.set_enabled("compare", ready)
 
-    def _path_row(self, parent, label, variable):
+    def _path_row(self, parent, label, variable, browse_command):
         row = ttk.Frame(parent)
         row.pack(fill="x", pady=5)
         ttk.Label(row, text=label, width=10).pack(side="left")
-        ttk.Entry(row, textvariable=variable, state="readonly").pack(side="left", fill="x", expand=True)
+        entry = ttk.Entry(row, textvariable=variable)
+        entry.pack(side="left", fill="x", expand=True)
+        ttk.Button(row, text="選択", command=browse_command, width=8).pack(side="left", padx=(6, 0))
 
     def _pick(self, variable):
         path = filedialog.askopenfilename(filetypes=[("CSV / Excel", "*.csv *.xlsx *.xlsm"), ("All", "*.*")])
@@ -146,13 +148,16 @@ class DataContractAuditApp(tk.Tk):
         if not self.baseline.get() or not self.current.get():
             messagebox.showwarning("入力不足", "BaselineとCurrentを選択してください。")
             return
-        baseline = self.baseline.get()
-        current = self.current.get()
+        baseline = self.baseline.get().strip().strip('"')
+        current = self.current.get().strip().strip('"')
+        self.baseline.set(baseline)
+        self.current.set(current)
         if Path(baseline).resolve() == Path(current).resolve():
             messagebox.showwarning("選択エラー", "同じファイル同士の監査はできません。")
             return
         keys = [x.strip() for x in self.keys.get().split(",") if x.strip()]
-        output_dir = self.output_dir.get()
+        output_dir = self.output_dir.get().strip().strip('"')
+        self.output_dir.set(output_dir)
         self._running = True
         self._refresh_actions()
         self.progress.start(15)
