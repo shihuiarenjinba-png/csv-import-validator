@@ -15,6 +15,7 @@ class LocalQaScriptContractTests(unittest.TestCase):
             "outputs_reopen",
             "inputs_unchanged",
             "ui_language_and_scaling",
+            "advanced_settings_collapsed_by_default",
             "ui_compare_workflow",
             "ui_error_path",
             "close_relaunch",
