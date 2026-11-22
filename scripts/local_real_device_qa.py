@@ -237,7 +237,7 @@ def main() -> int:
             if "基準ファイル（前回・正常）" not in ja_text:
                 raise AssertionError("Japanese first-run guidance did not render")
 
-            app.destroy()
+            app._close()
         passed("ui_language_and_scaling", layout)
 
         app = DataContractAuditApp()
@@ -276,8 +276,8 @@ def main() -> int:
         app2 = DataContractAuditApp()
         install_bilingual_ui(app2)
         app2.update_idletasks()
-        app2.destroy()
-        passed("close_relaunch", {"status": "second instance created and destroyed"})
+        app2._close()
+        passed("close_relaunch", {"status": "second instance created and closed cleanly"})
 
     evidence = {
         "schema_version": "data-contract-local-real-device-qa/1",
