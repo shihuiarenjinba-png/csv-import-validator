@@ -59,11 +59,13 @@ class DataContractAuditApp(tk.Tk):
             lambda: self._pick(self.current),
         )
 
-        advanced = ttk.LabelFrame(root, text="詳細設定（通常は変更不要）", padding=(10, 7))
-        advanced.pack(fill="x", pady=(8, 8))
-        self._advanced_path_row(advanced, "結果の保存先", self.output_dir, self._pick_output)
+        self.advanced_toggle = ttk.Button(root, text="詳細設定", command=self._toggle_advanced)
+        self.advanced_toggle.pack(anchor="w", pady=(2, 4))
 
-        key_row = ttk.Frame(advanced)
+        self.advanced_frame = ttk.LabelFrame(root, text="詳細設定（通常は変更不要）", padding=(10, 7))
+        self._advanced_path_row(self.advanced_frame, "結果の保存先", self.output_dir, self._pick_output)
+
+        key_row = ttk.Frame(self.advanced_frame)
         key_row.pack(fill="x", pady=3)
         ttk.Label(key_row, text="重複チェック用の列", width=18).pack(side="left")
         ttk.Entry(key_row, textvariable=self.keys).pack(side="left", fill="x", expand=True)
@@ -137,6 +139,12 @@ class DataContractAuditApp(tk.Tk):
         entry = ttk.Entry(row, textvariable=variable)
         entry.pack(side="left", fill="x", expand=True)
         ttk.Button(row, text="選択", command=browse_command, width=8).pack(side="left", padx=(6, 0))
+
+    def _toggle_advanced(self):
+        if self.advanced_frame.winfo_manager():
+            self.advanced_frame.pack_forget()
+        else:
+            self.advanced_frame.pack(fill="x", pady=(0, 8), before=self.compare_button)
 
     def _advanced_path_row(self, parent, label, variable, browse_command):
         row = ttk.Frame(parent)
