@@ -118,6 +118,12 @@ def set_language(lang):
     except Exception:
         pass
     for controller in tuple(_CONTROLLERS):
+        if not controller.is_alive():
+            try:
+                _CONTROLLERS.remove(controller)
+            except ValueError:
+                pass
+            continue
         controller.refresh()
 
 def _patch():
@@ -165,6 +171,12 @@ class LanguageController:
         _CONTROLLERS.append(self)
         self.refresh()
 
+    def is_alive(self):
+        try:
+            return bool(self.root.winfo_exists())
+        except tk.TclError:
+            return False
+
     def _snapshot(self, widget):
         try:
             widget._i18n_original_text = widget.cget("text")
@@ -183,6 +195,8 @@ class LanguageController:
             self._refresh(child)
 
     def refresh(self):
+        if not self.is_alive():
+            return
         self.root.title(translate(self.original_title))
         self._refresh(self.root)
         refresh_hook = getattr(self.root, "refresh_i18n", None)
