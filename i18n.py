@@ -27,6 +27,7 @@ _CONTROLLERS = []
 _PATCHED = False
 
 TEXTS = {
+    "詳細設定": ("Advanced settings", "詳細設定"),
     "前回のCSV / Excelと今回のCSV / Excelを比べて、列・型・欠損・重複・値の変化を見つけます。": ("Compare a previous CSV / Excel file with the current one to detect changes in columns, types, missing values, duplicates and values.", "前回のCSV / Excelと今回のCSV / Excelを比べて、列・型・欠損・重複・値の変化を見つけます。"),
     "元ファイルは変更しません。通常は下の2つを選んで「比較を開始」を押すだけです。": ("Original files are not modified. Normally, just choose the two files below and press Start comparison.", "元ファイルは変更しません。通常は下の2つを選んで「比較を開始」を押すだけです。"),
     "① 基準ファイル（前回・正常）": ("① Baseline file (previous / normal)", "① 基準ファイル（前回・正常）"),
