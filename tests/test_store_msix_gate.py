@@ -137,6 +137,14 @@ class StoreGateTests(unittest.TestCase):
         self.assertEqual(result["windows_real_device_qa_status"], "NOT_PASSED")
         self.assertTrue(any("Windows real-device GUI QA" in x for x in result["blockers"]))
 
+
+    def test_build_script_separates_formal_and_qa_unsigned_names(self):
+        script = (ROOT / "store" / "build-msix.ps1").read_text(encoding="utf-8")
+        self.assertIn('DataContractSchemaDrift_QA_UNSIGNED_', script)
+        self.assertIn('DataContractSchemaDrift_" + $PackageVersion + "_x64.msix', script)
+        self.assertIn('UNSIGNED_STORE_CANDIDATE', script)
+        self.assertIn('FORMAL_UNSIGNED_MSIX_CREATED', script)
+
     def _make_msix(self, path: Path, display_name: str = "Data Contract Auditor"):
         manifest = f'''<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10">
 <Identity Name="OkinawaDesktopTools.DataContractAuditor" Publisher="CN=TEST-ONLY" Version="1.0.0.0" ProcessorArchitecture="x64"/>
