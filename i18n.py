@@ -27,6 +27,20 @@ _CONTROLLERS = []
 _PATCHED = False
 
 TEXTS = {
+    "前回のCSV / Excelと今回のCSV / Excelを比べて、列・型・欠損・重複・値の変化を見つけます。": ("Compare a previous CSV / Excel file with the current one to detect changes in columns, types, missing values, duplicates and values.", "前回のCSV / Excelと今回のCSV / Excelを比べて、列・型・欠損・重複・値の変化を見つけます。"),
+    "元ファイルは変更しません。通常は下の2つを選んで「比較を開始」を押すだけです。": ("Original files are not modified. Normally, just choose the two files below and press Start comparison.", "元ファイルは変更しません。通常は下の2つを選んで「比較を開始」を押すだけです。"),
+    "① 基準ファイル（前回・正常）": ("① Baseline file (previous / normal)", "① 基準ファイル（前回・正常）"),
+    "以前の正常なCSV / Excel。比較の基準になります。": ("A previous known-good CSV / Excel file used as the baseline.", "以前の正常なCSV / Excel。比較の基準になります。"),
+    "② 今回ファイル（新しい方）": ("② Current file (new)", "② 今回ファイル（新しい方）"),
+    "今回確認したいCSV / Excel。基準との差を検出します。": ("The CSV / Excel file you want to check. Differences from the baseline are detected.", "今回確認したいCSV / Excel。基準との差を検出します。"),
+    "詳細設定（通常は変更不要）": ("Advanced settings (usually no changes needed)", "詳細設定（通常は変更不要）"),
+    "結果の保存先": ("Results folder", "結果の保存先"),
+    "重複チェック用の列": ("Column(s) for duplicate check", "重複チェック用の列"),
+    "任意。例: id / customer_id,date": ("Optional. Example: id / customer_id,date", "任意。例: id / customer_id,date"),
+    "③ 比較を開始": ("③ Start comparison", "③ 比較を開始"),
+    "検出された変更": ("Detected changes", "検出された変更"),
+    "表示:": ("Show:", "表示:"),
+    "まず2つのファイルを選んでください。": ("Choose the two files to begin.", "まず2つのファイルを選んでください。"),
     "Local analysis — input files are read only.": ("Local analysis — input files are read only.", "ローカル解析 — 入力ファイルは読み取りのみで、変更しません。"),
     "Output": ("Output", "出力先"),
     "Compare": ("Compare", "比較"),
