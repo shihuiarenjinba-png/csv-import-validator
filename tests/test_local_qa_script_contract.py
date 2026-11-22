@@ -22,6 +22,9 @@ class LocalQaScriptContractTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, PY)
 
+    def test_runner_adds_repository_root_to_python_path(self):
+        self.assertIn("sys.path.insert(0, str(root))", PY)
+
     def test_wrapper_fail_closes_and_does_not_authorize_store_upload(self):
         self.assertIn("Working tree must be clean before QA", PS)
         self.assertIn("Local HEAD is not the current remote branch HEAD", PS)
