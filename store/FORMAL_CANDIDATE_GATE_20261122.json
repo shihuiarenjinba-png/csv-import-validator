@@ -16,12 +16,14 @@
     "ja-JP"
   ],
   "windows_real_device_qa": {
-    "status": "NOT_PASSED",
-    "launch": "UNKNOWN_NOT_POLICY_BLOCK",
-    "ja_en_spot_check": "NOT_EXECUTED",
-    "secondary_dpi": "NOT_EXECUTED",
-    "close_relaunch": "NOT_EXECUTED",
-    "core_input_output_non_destructive": "PASS"
+    "status": "WINDOWS_REAL_DEVICE_QA_PASS",
+    "launch": "PASS_SOURCE_PYTHON_WINDOWS11",
+    "ja_en_spot_check": "PASS_AUTOMATED",
+    "secondary_dpi": "PASS_100_125_150_EQUIVALENT",
+    "close_relaunch": "PASS_AUTOMATED",
+    "core_input_output_non_destructive": "PASS",
+    "evidence_source_sha": "4d1c76e0701f12c85672f3686f491f3dcd7b7a4c",
+    "evidence_file": "LOCAL_REAL_DEVICE_QA.json"
   },
   "final_artwork": {
     "status": "NOT_APPROVED",
@@ -37,13 +39,12 @@
   "formal_source_sha": null,
   "formal_exe_sha256": null,
   "formal_msix_sha256": null,
-  "status": "HOLD_FORMAL_CANDIDATE_GATE",
+  "status": "HOLD_FINAL_ARTWORK",
   "blockers": [
-    "WINDOWS_REAL_DEVICE_QA_NOT_PASSED",
     "FINAL_ARTWORK_NOT_OWNER_APPROVED"
   ],
-  "next_allowed_action": "COMPLETE_WINDOWS_REAL_DEVICE_QA_AND_FINAL_ARTWORK_APPROVAL",
+  "next_allowed_action": "COMPLETE_FINAL_ARTWORK_APPROVAL_THEN_BUILD_FORMAL_CANDIDATE",
   "certification_submit_authorized": false,
   "publish_authorized": false,
-  "recorded_date": "2026-11-22"
+  "recorded_date": "2026-11-23"
 }
