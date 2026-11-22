@@ -111,7 +111,7 @@ class DataContractAuditApp(tk.Tk):
             self.tree.column(key, width=width, anchor="w")
         self.tree.pack(fill="both", expand=True)
 
-        self.after(150, self._poll)
+        self._poll_after_id = self.after(150, self._poll)
         self.protocol("WM_DELETE_WINDOW", self._close)
         self.baseline.trace_add("write", lambda *_: self._refresh_actions())
         self.current.trace_add("write", lambda *_: self._refresh_actions())
@@ -247,13 +247,24 @@ class DataContractAuditApp(tk.Tk):
                     messagebox.showerror("監査失敗", value)
         except queue.Empty:
             pass
-        self.after(150, self._poll)
+        try:
+            if self.winfo_exists():
+                self._poll_after_id = self.after(150, self._poll)
+        except tk.TclError:
+            self._poll_after_id = None
 
     def _close(self):
         if self._running:
             messagebox.showwarning("処理中", "監査が完了するまではウィンドウを閉じないでください。")
             return
         save_window_state(self, "DataContractAuditor")
+        after_id = getattr(self, "_poll_after_id", None)
+        if after_id:
+            try:
+                self.after_cancel(after_id)
+            except tk.TclError:
+                pass
+            self._poll_after_id = None
         self.destroy()
 
 
