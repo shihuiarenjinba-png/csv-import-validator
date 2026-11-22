@@ -73,7 +73,7 @@ def _infer_kind(series: pd.Series) -> str:
     numeric = pd.to_numeric(text.str.replace(",", "", regex=False), errors="coerce")
     if numeric.notna().mean() >= 0.98:
         return "numeric_text"
-    dt = pd.to_datetime(text, errors="coerce")
+    dt = pd.to_datetime(text, errors="coerce", format="mixed")
     if dt.notna().mean() >= 0.98:
         return "datetime_text"
     unique_ratio = text.nunique(dropna=True) / max(len(text), 1)
