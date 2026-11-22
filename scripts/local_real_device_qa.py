@@ -69,16 +69,16 @@ def geometry_probe(app, scale: float) -> dict:
         while stack:
             node = stack.pop()
             cls = str(node.winfo_class())
-            if cls in {"TEntry", "Entry"}:
+            if cls in {"TEntry", "Entry"} and bool(node.winfo_ismapped()):
                 entries.append(node)
             if cls == "Treeview":
                 tree = node
             stack.extend(node.winfo_children())
 
-    if len(entries) < 4:
-        raise AssertionError(f"Expected at least 4 editable entries, got {len(entries)}")
-    if any(str(e.cget("state")) in {"readonly", "disabled"} for e in entries):
-        raise AssertionError("A path/settings entry is unexpectedly read-only or disabled")
+    if len(entries) < 2:
+        raise AssertionError(f"Expected at least 2 visible primary entries, got {len(entries)}")
+    if any(str(e.cget("state")) in {"readonly", "disabled"} for e in entries[:2]):
+        raise AssertionError("A primary file path entry is unexpectedly read-only or disabled")
     if min(int(e.winfo_width()) for e in entries[:2]) < 200:
         raise AssertionError("Primary file path entry is too narrow")
     if int(app.compare_button.winfo_width()) < 80:
@@ -86,12 +86,31 @@ def geometry_probe(app, scale: float) -> dict:
     if tree is None or int(tree.winfo_width()) < 400 or int(tree.winfo_height()) < 70:
         raise AssertionError("Findings table is not usable at this scaling")
 
+    if app.advanced_frame.winfo_manager():
+        raise AssertionError("Advanced settings must start collapsed")
+    app._toggle_advanced()
+    app.update_idletasks()
+    app.update()
+    visible_after_toggle = []
+    for child in app.winfo_children():
+        stack = [child]
+        while stack:
+            node = stack.pop()
+            if str(node.winfo_class()) in {"TEntry", "Entry"} and bool(node.winfo_ismapped()):
+                visible_after_toggle.append(node)
+            stack.extend(node.winfo_children())
+    if len(visible_after_toggle) < 4:
+        raise AssertionError("Advanced settings did not expose their editable fields")
+    app._toggle_advanced()
+    app.update_idletasks()
+
     return {
         "tk_scaling": scale,
         "window": [width, height],
         "primary_entry_min_width": min(int(e.winfo_width()) for e in entries[:2]),
         "compare_button_width": int(app.compare_button.winfo_width()),
         "tree_size": [int(tree.winfo_width()), int(tree.winfo_height())],
+        "advanced_settings_collapsed_by_default": True,
     }
 
 
