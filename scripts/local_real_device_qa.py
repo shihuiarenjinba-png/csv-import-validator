@@ -270,7 +270,15 @@ def main() -> int:
         passed("ui_error_path", {"last_error": errors[-1]})
 
         app._close()
-        if app.winfo_exists():
+        try:
+            still_exists = bool(app.winfo_exists())
+        except Exception as exc:
+            # Python 3.14/Tk raises TclError after the Tcl interpreter has
+            # already been destroyed. That is a successful close, not a failure.
+            if exc.__class__.__name__ != "TclError":
+                raise
+            still_exists = False
+        if still_exists:
             raise AssertionError("UI did not close cleanly")
 
         app2 = DataContractAuditApp()
