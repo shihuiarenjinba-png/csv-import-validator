@@ -10,22 +10,23 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location -LiteralPath $Root
 
-function GitText([string[]]$Args) {
-    $Out = & git @Args 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "git $($Args -join ' ') failed: $Out" }
+function GitText {
+    param([string[]]$GitArguments)
+    $Out = & git @GitArguments 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "git $($GitArguments -join ' ') failed: $Out" }
     return ($Out | Out-String).Trim()
 }
 
 $ExpectedBranch = "codex/store-p0-data-contract-20261023"
-$Branch = GitText @("branch","--show-current")
+$Branch = GitText -GitArguments @("branch","--show-current")
 if ($Branch -cne $ExpectedBranch) { throw "Wrong branch: $Branch" }
 
-GitText @("fetch","origin") | Out-Null
-$Head = GitText @("rev-parse","HEAD")
-$RemoteHead = GitText @("rev-parse",("origin/" + $ExpectedBranch))
+GitText -GitArguments @("fetch","origin") | Out-Null
+$Head = GitText -GitArguments @("rev-parse","HEAD")
+$RemoteHead = GitText -GitArguments @("rev-parse",("origin/" + $ExpectedBranch))
 if ($Head -cne $RemoteHead) { throw "Local HEAD is not the current remote branch HEAD." }
 
-$Dirty = GitText @("status","--porcelain","--untracked-files=all")
+$Dirty = GitText -GitArguments @("status","--porcelain","--untracked-files=all")
 if (-not [string]::IsNullOrWhiteSpace($Dirty)) {
     throw "Working tree must be clean before QA. Dirty state: $Dirty"
 }
