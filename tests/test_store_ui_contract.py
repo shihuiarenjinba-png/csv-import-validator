@@ -8,7 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = (ROOT / "app.py").read_text(encoding="utf-8")
-CHECKS = [["Data Contract Auditor","reserved Store name"],["self.geometry(\"900x580\")","default geometry"],["self.minsize(800, 500)","minimum geometry"],["Path(out).name","output path privacy"],["entry = ttk.Entry(row, textvariable=variable)","editable path entry"],["ttk.Button(row, text=\"選択\"","per-row browse button"]]
+CHECKS = [["Data Contract Auditor","reserved Store name"],["self.geometry(\"900x580\")","default geometry"],["self.minsize(800, 500)","minimum geometry"],["Path(out).name","output path privacy"],["① 基準ファイル（前回・正常）","clear baseline step"],["② 今回ファイル（新しい方）","clear current step"],["詳細設定（通常は変更不要）","advanced settings are de-emphasized"],["③ 比較を開始","single primary action"],["entry = ttk.Entry(row, textvariable=variable)","editable path entry"],["ttk.Button(row, text=\"選択\"","browse button"]]
 
 class StoreUiContractTests(unittest.TestCase):
     def test_reviewed_ui_contract_is_present(self):
