@@ -6,6 +6,7 @@ import json
 import os
 import platform
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -100,6 +101,12 @@ def main() -> int:
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parents[1]
+    # Running a file from scripts/ makes scripts/ sys.path[0]. Add the
+    # repository root explicitly so app.py / contract_auditor.py resolve
+    # the same way they do when launched from the repository root.
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+
     evidence_dir = Path(args.evidence_dir).expanduser().resolve()
     evidence_dir.mkdir(parents=True, exist_ok=True)
 
