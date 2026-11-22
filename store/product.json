@@ -5,19 +5,21 @@
   "brandAbbreviation": "DCS",
   "needsBundledBrowser": false,
   "productClass": "Windows paid productivity tool",
-  "storeStatus": "HOLD_FINAL_ARTWORK_WINDOWS_REAL_DEVICE_QA_REQUIRED",
+  "storeStatus": "HOLD_FINAL_ARTWORK_REQUIRED",
   "commercialLicense": "NOT_CERTIFIED",
   "entryPoint": "app.py",
   "partnerCenterRegistration": "PARTNER_CENTER_SCREENSHOT_VERIFIED",
-  "msixPackageStatus": "FORMAL_NOT_BUILT_QA_UNSIGNED_DO_NOT_UPLOAD",
-  "notes": "Store version 1.0.0.0 and manifest languages en-US/ja-JP are owner-approved. Exact Store ID, identity, PFN, Package SID and Draft ID are recorded for later ReadOnly re-verification. Formal MSIX remains blocked until Windows real-device GUI QA passes and final artwork is owner-approved. QA_UNSIGNED 1.0.63.0 must never be uploaded. Certification submission and publication remain unauthorized.",
-  "windowsRealDeviceQaStatus": "NOT_PASSED",
+  "msixPackageStatus": "FORMAL_NOT_BUILT_ARTWORK_REQUIRED",
+  "notes": "Windows real-device QA passed on source 4d1c76e0701f12c85672f3686f491f3dcd7b7a4c via automated local QA. Store version 1.0.0.0 and manifest languages en-US/ja-JP remain approved. Formal MSIX is blocked only by owner-approved final artwork and the required final exact-source build/reverification. QA_UNSIGNED 1.0.63.0 must never be uploaded. Certification/publish remain separate gated actions.",
+  "windowsRealDeviceQaStatus": "WINDOWS_REAL_DEVICE_QA_PASS",
   "windowsRealDeviceQa": {
-    "launch": "UNKNOWN_NOT_POLICY_BLOCK",
-    "jaEnSpotCheck": "NOT_EXECUTED",
-    "secondaryDpi": "NOT_EXECUTED",
-    "closeRelaunch": "NOT_EXECUTED",
-    "coreInputOutputNonDestructive": "PASS"
+    "launch": "PASS_SOURCE_PYTHON_WINDOWS11",
+    "jaEnSpotCheck": "PASS_AUTOMATED",
+    "secondaryDpi": "PASS_100_125_150_EQUIVALENT",
+    "closeRelaunch": "PASS_AUTOMATED",
+    "coreInputOutputNonDestructive": "PASS",
+    "evidenceSourceSha": "4d1c76e0701f12c85672f3686f491f3dcd7b7a4c",
+    "evidenceFile": "LOCAL_REAL_DEVICE_QA.json"
   },
   "finalArtworkApprovalStatus": "NOT_APPROVED"
 }
