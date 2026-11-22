@@ -23,6 +23,10 @@ class LocalQaScriptContractTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, PY)
 
+    def test_runner_uses_normal_app_close_path(self):
+        self.assertIn("app._close()", PY)
+        self.assertIn("app2._close()", PY)
+
     def test_runner_adds_repository_root_to_python_path(self):
         self.assertIn("sys.path.insert(0, str(root))", PY)
 
