@@ -128,6 +128,10 @@ def validate_config(root: Path, version: str | None = None) -> dict:
     if not isinstance(app_id, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9]{2,48}", app_id):
         blockers.append("Configured application ID is invalid.")
 
+    windows_qa_status = product.get("windowsRealDeviceQaStatus")
+    if windows_qa_status != "WINDOWS_REAL_DEVICE_QA_PASS":
+        blockers.append("Windows real-device GUI QA is not recorded as WINDOWS_REAL_DEVICE_QA_PASS.")
+
     approval_path = store / "assets" / "approval.json"
     approval = _read_json(approval_path, blockers) if approval_path.exists() else {}
     if not approval:
@@ -160,6 +164,7 @@ def validate_config(root: Path, version: str | None = None) -> dict:
         "ready": not blockers,
         "certification_ready": False,
         "sales_release": "HOLD",
+        "windows_real_device_qa_status": windows_qa_status,
         "blockers": blockers,
         "warnings": warnings,
     }

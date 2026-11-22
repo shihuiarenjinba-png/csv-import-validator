@@ -1,0 +1,49 @@
+{
+  "schema_version": "data-contract-formal-candidate-gate/1",
+  "product": "Data Contract Auditor",
+  "repository": "shihuiarenjinba-png/csv-import-validator",
+  "branch": "codex/store-p0-data-contract-20261023",
+  "qa_baseline_source_sha": "107e59f2cbcde9c6ca88cf1aaf3d52262004e6e0",
+  "store_id": "9PDL4ZWSB45P",
+  "draft_id": "1152921505702212222",
+  "identity_name": "OkinawaDesktopTools.DataContractAuditor",
+  "publisher": "CN=46263F21-A700-41DB-8C9B-114C22FB82FC",
+  "package_family_name": "OkinawaDesktopTools.DataContractAuditor_j8yefg9jgfh58",
+  "package_sid": "S-1-15-2-1604001028-3538366582-1604686486-898744028-3049784359-1003679317-2779270623",
+  "approved_store_version": "1.0.0.0",
+  "approved_manifest_resources": [
+    "en-US",
+    "ja-JP"
+  ],
+  "windows_real_device_qa": {
+    "status": "NOT_PASSED",
+    "launch": "UNKNOWN_NOT_POLICY_BLOCK",
+    "ja_en_spot_check": "NOT_EXECUTED",
+    "secondary_dpi": "NOT_EXECUTED",
+    "close_relaunch": "NOT_EXECUTED",
+    "core_input_output_non_destructive": "PASS"
+  },
+  "final_artwork": {
+    "status": "NOT_APPROVED",
+    "approval_json_present": false
+  },
+  "forbidden_store_uploads": [
+    {
+      "version": "1.0.63.0",
+      "classification": "QA_UNSIGNED",
+      "upload": false
+    }
+  ],
+  "formal_source_sha": null,
+  "formal_exe_sha256": null,
+  "formal_msix_sha256": null,
+  "status": "HOLD_FORMAL_CANDIDATE_GATE",
+  "blockers": [
+    "WINDOWS_REAL_DEVICE_QA_NOT_PASSED",
+    "FINAL_ARTWORK_NOT_OWNER_APPROVED"
+  ],
+  "next_allowed_action": "COMPLETE_WINDOWS_REAL_DEVICE_QA_AND_FINAL_ARTWORK_APPROVAL",
+  "certification_submit_authorized": false,
+  "publish_authorized": false,
+  "recorded_date": "2026-11-22"
+}

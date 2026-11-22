@@ -5,15 +5,16 @@
   "branch": "codex/store-p0-data-contract-20261023",
   "appType": "MSIX_OR_PWA_APP",
   "targetPackage": "MSIX",
-  "partnerCenterState": "EXISTING_CONFIRMED",
-  "evidence": "Owner-provided Microsoft Partner Center 'View product identity' screenshot, 2026-10-23: Store ID, reserved DisplayName, Package Identity Name, Publisher, PublisherDisplayName, PFN, and Package SID evidenced. Store Version and approved artwork are not shown and remain UNKNOWN/HOLD.",
+  "partnerCenterState": "SUBMISSION_DRAFT_CONFIRMED",
+  "evidence": "Partner Center product-identity evidence plus owner-confirmed current draft and formal packaging approvals recorded 2026-11-22. Exact draft/identity must still be reverified through the authenticated ReadOnly CDP route before any live write.",
   "recordedDate": "2026-10-24",
   "storeIdentity": {
     "storeId": "9PDL4ZWSB45P",
     "packageIdentityName": "OkinawaDesktopTools.DataContractAuditor",
     "packageIdentityPublisher": "CN=46263F21-A700-41DB-8C9B-114C22FB82FC",
     "publisherDisplayName": "Okinawa Desktop Tools",
-    "packageFamilyName": "OkinawaDesktopTools.DataContractAuditor_j8yefg9jgfh58"
+    "packageFamilyName": "OkinawaDesktopTools.DataContractAuditor_j8yefg9jgfh58",
+    "packageSid": "S-1-15-2-1604001028-3538366582-1604686486-898744028-3049784359-1003679317-2779270623"
   },
   "nameReservationDate": null,
   "nameReservationExpiry": null,
@@ -28,11 +29,22 @@
     "packageIdentityName": "PARTNER_CENTER_VERIFIED",
     "packageIdentityPublisher": "PARTNER_CENTER_VERIFIED",
     "publisherDisplayName": "PARTNER_CENTER_VERIFIED",
-    "packageFamilyName": "PARTNER_CENTER_VERIFIED"
+    "packageFamilyName": "PARTNER_CENTER_VERIFIED",
+    "packageSid": "OWNER_CONFIRMED_PENDING_READ_ONLY_REVERIFY"
   },
-  "approvedStoreVersion": null,
-  "manifestResources": [],
+  "approvedStoreVersion": "1.0.0.0",
+  "manifestResources": [
+    "en-US",
+    "ja-JP"
+  ],
   "displayNameVerificationStatus": "PARTNER_CENTER_VERIFIED",
-  "approvedStoreVersionStatus": "UNKNOWN",
-  "manifestResourcesVerificationStatus": "UNKNOWN"
+  "approvedStoreVersionStatus": "OWNER_APPROVED",
+  "manifestResourcesVerificationStatus": "OWNER_APPROVED",
+  "draftId": "1152921505702212222",
+  "draftVerificationStatus": "OWNER_CONFIRMED_PENDING_READ_ONLY_REVERIFY",
+  "packageSidVerificationStatus": "OWNER_CONFIRMED_PENDING_READ_ONLY_REVERIFY",
+  "formalPackageUploadAuthorization": "NOT_AUTHORIZED_UNTIL_FORMAL_GATE_PASS",
+  "qaUnsignedUploadPolicy": "PROHIBITED",
+  "qaUnsignedKnownForbiddenVersion": "1.0.63.0",
+  "approvalRecordedDate": "2026-11-22"
 }

@@ -33,6 +33,7 @@ class StoreGateTests(unittest.TestCase):
             "entryPoint": "app.py",
             "commercialLicense": "NOT_CERTIFIED",
             "storeStatus": "HOLD_OFFICIAL_PARTNER_IDENTITY_REQUIRED",
+            "windowsRealDeviceQaStatus": "WINDOWS_REAL_DEVICE_QA_PASS",
         }
         self.registration = {
             "repository": "csv-import-validator",
@@ -127,6 +128,14 @@ class StoreGateTests(unittest.TestCase):
         result = validate_config(self.root, "1.0.0.0")
         self.assertFalse(result["ready"])
         self.assertTrue(any("store/assets/approval.json" in x for x in result["blockers"]))
+
+    def test_windows_real_device_qa_is_a_hard_formal_candidate_gate(self):
+        self.product["windowsRealDeviceQaStatus"] = "NOT_PASSED"
+        self._write_config()
+        result = validate_config(self.root, "1.0.0.0")
+        self.assertFalse(result["ready"])
+        self.assertEqual(result["windows_real_device_qa_status"], "NOT_PASSED")
+        self.assertTrue(any("Windows real-device GUI QA" in x for x in result["blockers"]))
 
     def _make_msix(self, path: Path, display_name: str = "Data Contract Auditor"):
         manifest = f'''<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10">

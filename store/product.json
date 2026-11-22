@@ -5,10 +5,19 @@
   "brandAbbreviation": "DCS",
   "needsBundledBrowser": false,
   "productClass": "Windows paid productivity tool",
-  "storeStatus": "HOLD_STORE_VERSION_ARTWORK_WINDOWS_QA_REQUIRED",
+  "storeStatus": "HOLD_FINAL_ARTWORK_WINDOWS_REAL_DEVICE_QA_REQUIRED",
   "commercialLicense": "NOT_CERTIFIED",
   "entryPoint": "app.py",
   "partnerCenterRegistration": "PARTNER_CENTER_SCREENSHOT_VERIFIED",
-  "msixPackageStatus": "NOT_BUILT",
-  "notes": "Microsoft Store reserved name and package identity are evidenced by the owner-provided Partner Center Product Identity screenshot. Store Version, approved artwork, MSIX build, and Windows QA remain HOLD. Do not submit for certification."
+  "msixPackageStatus": "FORMAL_NOT_BUILT_QA_UNSIGNED_DO_NOT_UPLOAD",
+  "notes": "Store version 1.0.0.0 and manifest languages en-US/ja-JP are owner-approved. Exact Store ID, identity, PFN, Package SID and Draft ID are recorded for later ReadOnly re-verification. Formal MSIX remains blocked until Windows real-device GUI QA passes and final artwork is owner-approved. QA_UNSIGNED 1.0.63.0 must never be uploaded. Certification submission and publication remain unauthorized.",
+  "windowsRealDeviceQaStatus": "NOT_PASSED",
+  "windowsRealDeviceQa": {
+    "launch": "UNKNOWN_NOT_POLICY_BLOCK",
+    "jaEnSpotCheck": "NOT_EXECUTED",
+    "secondaryDpi": "NOT_EXECUTED",
+    "closeRelaunch": "NOT_EXECUTED",
+    "coreInputOutputNonDestructive": "PASS"
+  },
+  "finalArtworkApprovalStatus": "NOT_APPROVED"
 }
