@@ -26,8 +26,10 @@
     "evidence_file": "LOCAL_REAL_DEVICE_QA.json"
   },
   "final_artwork": {
-    "status": "NOT_APPROVED",
-    "approval_json_present": false
+    "status": "OWNER_APPROVED",
+    "approval_json_present": true,
+    "source": "store/generate-approved-assets.ps1",
+    "approval_ref": "CHAT_APPROVAL_2026-11-23_DATA_CONTRACT_AUDITOR_BLUE_AUDIT_ICON"
   },
   "forbidden_store_uploads": [
     {
@@ -39,11 +41,9 @@
   "formal_source_sha": null,
   "formal_exe_sha256": null,
   "formal_msix_sha256": null,
-  "status": "HOLD_FINAL_ARTWORK",
-  "blockers": [
-    "FINAL_ARTWORK_NOT_OWNER_APPROVED"
-  ],
-  "next_allowed_action": "COMPLETE_FINAL_ARTWORK_APPROVAL_THEN_BUILD_FORMAL_CANDIDATE",
+  "status": "READY_TO_BUILD_FORMAL_CANDIDATE",
+  "blockers": [],
+  "next_allowed_action": "BUILD_FORMAL_CANDIDATE_1.0.0.0",
   "certification_submit_authorized": false,
   "publish_authorized": false,
   "recorded_date": "2026-11-23"
