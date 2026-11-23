@@ -5,11 +5,11 @@
   "brandAbbreviation": "DCS",
   "needsBundledBrowser": false,
   "productClass": "Windows paid productivity tool",
-  "storeStatus": "READY_FOR_FORMAL_MSIX_BUILD",
+  "storeStatus": "READY_FOR_PARTNER_CENTER_READONLY",
   "commercialLicense": "NOT_CERTIFIED",
   "entryPoint": "app.py",
   "partnerCenterRegistration": "PARTNER_CENTER_SCREENSHOT_VERIFIED",
-  "msixPackageStatus": "FORMAL_READY_TO_BUILD",
+  "msixPackageStatus": "FORMAL_UNSIGNED_MSIX_CREATED_AND_VERIFIED",
   "notes": "Windows real-device QA passed on source 4d1c76e0701f12c85672f3686f491f3dcd7b7a4c. Owner approved the blue spreadsheet/magnifier/check artwork concept on 2026-11-23; formal Store assets are generated deterministically by store/generate-approved-assets.ps1 during the clean formal build. Version 1.0.0.0 and en-US/ja-JP remain approved. QA_UNSIGNED 1.0.63.0 must never be uploaded. Certification/publish remain separate gated actions.",
   "windowsRealDeviceQaStatus": "WINDOWS_REAL_DEVICE_QA_PASS",
   "windowsRealDeviceQa": {
@@ -21,5 +21,14 @@
     "evidenceSourceSha": "4d1c76e0701f12c85672f3686f491f3dcd7b7a4c",
     "evidenceFile": "LOCAL_REAL_DEVICE_QA.json"
   },
-  "finalArtworkApprovalStatus": "OWNER_APPROVED_GENERATOR"
+  "finalArtworkApprovalStatus": "OWNER_APPROVED_GENERATOR",
+  "formalPackage": {
+    "sourceSha": "5a09d81955e25664761ea25ecfb4ebf8d24cea6d",
+    "exeSha256": "552bcc9bde5b14938b1b6dd2756aef64f69ba6d59c854d57f503edd8c651ce52",
+    "msixSha256": "4b373d2bc54ecbd3efa0a77a94005007777e66d641fa3908f523ac69fcd46984",
+    "msixFilename": "DataContractSchemaDrift_1.0.0.0_x64.msix",
+    "version": "1.0.0.0",
+    "signatureStatus": "UNSIGNED_STORE_CANDIDATE",
+    "unpackVerification": "PASS"
+  }
 }
