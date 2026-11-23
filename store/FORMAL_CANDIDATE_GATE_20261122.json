@@ -38,13 +38,15 @@
       "upload": false
     }
   ],
-  "formal_source_sha": null,
-  "formal_exe_sha256": null,
-  "formal_msix_sha256": null,
-  "status": "READY_TO_BUILD_FORMAL_CANDIDATE",
+  "formal_source_sha": "5a09d81955e25664761ea25ecfb4ebf8d24cea6d",
+  "formal_exe_sha256": "552bcc9bde5b14938b1b6dd2756aef64f69ba6d59c854d57f503edd8c651ce52",
+  "formal_msix_sha256": "4b373d2bc54ecbd3efa0a77a94005007777e66d641fa3908f523ac69fcd46984",
+  "status": "READY_FOR_PARTNER_CENTER_READONLY",
   "blockers": [],
-  "next_allowed_action": "BUILD_FORMAL_CANDIDATE_1.0.0.0",
+  "next_allowed_action": "PARTNER_CENTER_READONLY_REVERIFY_EXACT_DRAFT_AND_IDENTITY",
   "certification_submit_authorized": false,
   "publish_authorized": false,
-  "recorded_date": "2026-11-23"
+  "recorded_date": "2026-11-23",
+  "formal_msix_filename": "DataContractSchemaDrift_1.0.0.0_x64.msix",
+  "formal_msix_build_status": "FORMAL_UNSIGNED_MSIX_CREATED_AND_UNPACK_VERIFIED"
 }
