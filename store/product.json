@@ -5,12 +5,12 @@
   "brandAbbreviation": "DCS",
   "needsBundledBrowser": false,
   "productClass": "Windows paid productivity tool",
-  "storeStatus": "HOLD_FINAL_ARTWORK_REQUIRED",
+  "storeStatus": "READY_FOR_FORMAL_MSIX_BUILD",
   "commercialLicense": "NOT_CERTIFIED",
   "entryPoint": "app.py",
   "partnerCenterRegistration": "PARTNER_CENTER_SCREENSHOT_VERIFIED",
-  "msixPackageStatus": "FORMAL_NOT_BUILT_ARTWORK_REQUIRED",
-  "notes": "Windows real-device QA passed on source 4d1c76e0701f12c85672f3686f491f3dcd7b7a4c via automated local QA. Store version 1.0.0.0 and manifest languages en-US/ja-JP remain approved. Formal MSIX is blocked only by owner-approved final artwork and the required final exact-source build/reverification. QA_UNSIGNED 1.0.63.0 must never be uploaded. Certification/publish remain separate gated actions.",
+  "msixPackageStatus": "FORMAL_READY_TO_BUILD",
+  "notes": "Windows real-device QA passed on source 4d1c76e0701f12c85672f3686f491f3dcd7b7a4c. Owner approved the blue spreadsheet/magnifier/check artwork concept on 2026-11-23; formal Store assets are generated deterministically by store/generate-approved-assets.ps1 during the clean formal build. Version 1.0.0.0 and en-US/ja-JP remain approved. QA_UNSIGNED 1.0.63.0 must never be uploaded. Certification/publish remain separate gated actions.",
   "windowsRealDeviceQaStatus": "WINDOWS_REAL_DEVICE_QA_PASS",
   "windowsRealDeviceQa": {
     "launch": "PASS_SOURCE_PYTHON_WINDOWS11",
@@ -21,5 +21,5 @@
     "evidenceSourceSha": "4d1c76e0701f12c85672f3686f491f3dcd7b7a4c",
     "evidenceFile": "LOCAL_REAL_DEVICE_QA.json"
   },
-  "finalArtworkApprovalStatus": "NOT_APPROVED"
+  "finalArtworkApprovalStatus": "OWNER_APPROVED_GENERATOR"
 }
