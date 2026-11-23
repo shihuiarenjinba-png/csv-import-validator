@@ -13,7 +13,8 @@ $ConfigPath = Join-Path $PSScriptRoot "product.json"
 $RegistrationPath = Join-Path $PSScriptRoot "partner_center_registration.json"
 $ValidatorPath = Join-Path $PSScriptRoot "validate_store_config.py"
 $VerifierPath = Join-Path $PSScriptRoot "verify_msix_candidate.py"
-foreach ($Path in @($ConfigPath,$RegistrationPath,$ValidatorPath,$VerifierPath)) {
+$ArtworkGeneratorPath = Join-Path $PSScriptRoot "generate-approved-assets.ps1"
+foreach ($Path in @($ConfigPath,$RegistrationPath,$ValidatorPath,$VerifierPath,$ArtworkGeneratorPath)) {
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw "Required Store input is missing: $Path" }
 }
 function Invoke-GitText {
@@ -114,7 +115,7 @@ if ($QaUnsigned) {
 } else {
     $PackageVersion = [string]$Report.version_to_build
     $PackageLanguages = @($Registration.manifestResources)
-    $PackageAssetsDirectory = Join-Path $PSScriptRoot 'assets'
+    $PackageAssetsDirectory = ""
 }
 $Tag = (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + [Guid]::NewGuid().ToString("N").Substring(0,8)
 $OutputRoot = Join-Path $OutputBase $Tag
@@ -132,6 +133,18 @@ New-Item -ItemType Directory -Path $Scratch,$Dist,$Work,$Spec,$Stage,$Unpacked -
 $StageApp = Join-Path $Stage "App"
 $StageAssets = Join-Path $Stage "Assets"
 New-Item -ItemType Directory -Path $StageApp,$StageAssets -Force | Out-Null
+
+if (-not $QaUnsigned) {
+    $PackageAssetsDirectory = Join-Path $Scratch "approved-assets"
+    New-Item -ItemType Directory -Path $PackageAssetsDirectory -Force | Out-Null
+    & $ArtworkGeneratorPath -OutputDirectory $PackageAssetsDirectory
+    if ($LASTEXITCODE -ne 0) { throw "Approved Store artwork generation failed." }
+    foreach ($LogoName in @("StoreLogo.png","Square44x44Logo.png","Square150x150Logo.png","Wide310x150Logo.png")) {
+        if (-not (Test-Path -LiteralPath (Join-Path $PackageAssetsDirectory $LogoName) -PathType Leaf)) {
+            throw "Approved Store artwork generator did not create: $LogoName"
+        }
+    }
+}
 
 & $PythonExe -m venv $Venv
 if ($LASTEXITCODE -ne 0) { throw "Could not create isolated Python environment." }
