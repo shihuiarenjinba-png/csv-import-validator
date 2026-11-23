@@ -143,12 +143,21 @@ def validate_config(root: Path, version: str | None = None) -> dict:
             blockers.append("Artwork approval record belongs to a different product.")
         if not approval.get("approval_ref") or not approval.get("approved_by"):
             blockers.append("Artwork approval reference and approver are required.")
+    generator_path = store / "generate-approved-assets.ps1"
+    generator_approved = (
+        generator_path.is_file()
+        and approval.get("source") == "store/generate-approved-assets.ps1"
+        and approval.get("status") == "OWNER_APPROVED"
+    )
     for filename, expected in LOGOS.items():
         path = store / "assets" / filename
-        if not path.is_file():
-            blockers.append(f"Required approved logo is missing: store/assets/{filename}.")
-        elif _png_dimensions(path) != expected:
-            blockers.append(f"Logo {filename} dimensions do not match {expected}.")
+        if path.is_file():
+            if _png_dimensions(path) != expected:
+                blockers.append(f"Logo {filename} dimensions do not match {expected}.")
+        elif not generator_approved:
+            blockers.append(
+                f"Required approved logo is missing and no approved generator is available: store/assets/{filename}."
+            )
 
     if product.get("commercialLicense") != "CERTIFIED":
         warnings.append("Commercial license evidence is not certified; sales release remains HOLD.")
@@ -165,6 +174,7 @@ def validate_config(root: Path, version: str | None = None) -> dict:
         "certification_ready": False,
         "sales_release": "HOLD",
         "windows_real_device_qa_status": windows_qa_status,
+        "artwork_source": "APPROVED_GENERATOR" if generator_approved else "STATIC_PNG",
         "blockers": blockers,
         "warnings": warnings,
     }
