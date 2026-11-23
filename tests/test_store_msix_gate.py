@@ -122,6 +122,26 @@ class StoreGateTests(unittest.TestCase):
                 result = validate_config(self.root, bad)
                 self.assertFalse(result["ready"])
 
+    def test_approved_generator_can_supply_missing_pngs(self):
+        assets = self.store / "assets"
+        for filename in LOGOS:
+            (assets / filename).unlink()
+        approval_path = assets / "approval.json"
+        approval = json.loads(approval_path.read_text(encoding="utf-8"))
+        approval["source"] = "store/generate-approved-assets.ps1"
+        approval_path.write_text(json.dumps(approval), encoding="utf-8")
+        (self.store / "generate-approved-assets.ps1").write_text("# approved fixture generator", encoding="utf-8")
+        self._write_config()
+        result = validate_config(self.root, "1.0.0.0")
+        self.assertTrue(result["ready"], result["blockers"])
+        self.assertEqual(result["artwork_source"], "APPROVED_GENERATOR")
+
+    def test_build_script_generates_formal_artwork_into_scratch(self):
+        script = (ROOT / "store" / "build-msix.ps1").read_text(encoding="utf-8")
+        self.assertIn("generate-approved-assets.ps1", script)
+        self.assertIn('Join-Path $Scratch "approved-assets"', script)
+        self.assertIn("-OutputDirectory $PackageAssetsDirectory", script)
+
     def test_artwork_requires_owner_approval(self):
         (self.store / "assets" / "approval.json").unlink()
         self._write_config()
