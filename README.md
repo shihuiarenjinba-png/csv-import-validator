@@ -42,10 +42,12 @@ Baselineから `generated_contract.json` も作成します。現在はRequired�
 
 ## 実行
 
+このMVPはCSV / Excel読み込みとSchema Drift集計にNumPy・pandas・openpyxlを使用します。
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 python app.py
 ```
 
