@@ -70,6 +70,7 @@ jobs:
     needs: regression-preflight
     if: always() && needs.regression-preflight.result == 'success'
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout dedicated work branch
         uses: actions/checkout@v7
