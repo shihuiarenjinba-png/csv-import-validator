@@ -215,7 +215,13 @@ def main() -> int:
         # UI contract and workflow smoke on the real Windows desktop Python/Tk stack.
         from tkinter import messagebox
         from app import DataContractAuditApp
+        from app_paths import default_results_directory
         from i18n import install_bilingual_ui, set_language
+
+        expected_default_output = Path(os.environ["LOCALAPPDATA"]) / "DataContractAuditor" / "Results"
+        if default_results_directory() != expected_default_output:
+            raise AssertionError("Default DCA results folder is not per-user LOCALAPPDATA")
+        passed("writable_default_output", {"path": str(expected_default_output)})
 
         layout = []
         for scale in (96 / 72, 120 / 72, 144 / 72):
