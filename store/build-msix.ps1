@@ -29,7 +29,8 @@ function Write-PreflightReport {
     $ReadyText = if ($Report.ready) { "true" } else { "false" }
     if ($env:GITHUB_OUTPUT) {
         Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "ready=$ReadyText" -Encoding UTF8
-        if ($Report.candidate_status -eq 'PROVISIONAL_NOT_OWNER_APPROVED') {
+        $hasCandidateStatus = @($Report.PSObject.Properties.Name) -contains 'candidate_status'
+        if ($hasCandidateStatus -and $Report.candidate_status -eq 'PROVISIONAL_NOT_OWNER_APPROVED') {
             Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "candidate_version=$([string]$Report.version_to_build)" -Encoding UTF8
             Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "candidate_owner_approved=false" -Encoding UTF8
         } else {

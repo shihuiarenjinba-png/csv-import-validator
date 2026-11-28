@@ -37,6 +37,7 @@ class BuilderSourceSafetyTests(unittest.TestCase):
         self.assertIn("publish_authorized = $false", text)
         self.assertIn("QA_UNSIGNED and ProvisionalCandidate are mutually exclusive.", text)
         self.assertIn("candidate_version=$([string]$Report.version_to_build)", text)
+        self.assertIn("$Report.PSObject.Properties.Name", text)
         self.assertNotIn("Set-Content -LiteralPath $RegistrationPath", text)
 
     def test_workflow_requires_explicit_dispatch_for_provisional_candidate(self):
