@@ -23,6 +23,7 @@ jobs:
       - name: Checkout dedicated work branch
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -55,7 +56,7 @@ jobs:
       - name: Run Store package readiness preflight
         id: preflight
         shell: pwsh
-        run: ./store/build-msix.ps1 -PreflightOnly
+        run: ./store/build-msix.ps1 -PreflightOnly -QaUnsigned
       - name: Preserve preflight report
         if: always()
         uses: actions/upload-artifact@v7
@@ -73,6 +74,7 @@ jobs:
       - name: Checkout dedicated work branch
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -156,6 +158,7 @@ jobs:
       - name: Checkout dedicated work branch
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v7
