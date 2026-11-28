@@ -27,7 +27,7 @@ class BuilderSourceSafetyTests(unittest.TestCase):
     def test_origin_branch_commit_and_clean_worktree_before_outputs(self):
         text = self.script
         repo_check = text.index("if ($RemoteUrl -notmatch")
-        branch_check = text.index("if ($Branch -cne")
+        branch_check = text.index("if ($Branch -notin $AllowedBranches)")
         sha_check = text.index("if ($SourceSha -notmatch")
         dirty_check = text.index("if (-not [string]::IsNullOrWhiteSpace($DirtyState))")
         first_write = text.index("New-Item -ItemType Directory")
