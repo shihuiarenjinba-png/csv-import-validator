@@ -21,10 +21,14 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def canonical_source_sha256(path: Path) -> str:
-    """Hash Python source independent of Windows CRLF checkout conversion."""
-    source = path.read_bytes().replace(b"\r\n", b"\n")
-    return hashlib.sha256(source).hexdigest()
+def canonical_source_sha256(path: Path, root: Path) -> str:
+    """Hash the committed Git blob, independent of checkout filters and line endings."""
+    relative = path.resolve().relative_to(root.resolve()).as_posix()
+    result = subprocess.run(
+        ["git", "cat-file", "blob", f"HEAD:{relative}"],
+        cwd=root, capture_output=True, check=True,
+    )
+    return hashlib.sha256(result.stdout).hexdigest()
 
 
 def git_text(root: Path, *args: str) -> str:
@@ -141,7 +145,7 @@ def main() -> int:
     source_status = git_text(root, "status", "--porcelain", "--untracked-files=all")
     source_worktree_clean = not bool(source_status)
     source_status_sha256 = hashlib.sha256(source_status.encode("utf-8")).hexdigest()
-    driver_sha256 = canonical_source_sha256(Path(__file__).resolve())
+    driver_sha256 = canonical_source_sha256(Path(__file__).resolve(), root)
 
     checks: list[dict] = []
 
