@@ -72,6 +72,7 @@ try {
     Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password (ConvertTo-SecureString $testPassword -AsPlainText -Force) | Out-Null
     Export-Certificate -Cert $cert -FilePath $cerPath | Out-Null
     Import-Certificate -FilePath $cerPath -CertStoreLocation Cert:\CurrentUser\TrustedPeople | Out-Null
+    Import-Certificate -FilePath $cerPath -CertStoreLocation Cert:\CurrentUser\Root | Out-Null
 
     $sdkRoot = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
     $signTool = Get-ChildItem -LiteralPath $sdkRoot -Filter signtool.exe -Recurse -File |
@@ -181,6 +182,7 @@ finally {
     }
     if ($certificateThumbprint) {
         Remove-Item -Path ("Cert:\CurrentUser\TrustedPeople\" + $certificateThumbprint) -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path ("Cert:\CurrentUser\Root\" + $certificateThumbprint) -Force -ErrorAction SilentlyContinue
         Remove-Item -Path ("Cert:\CurrentUser\My\" + $certificateThumbprint) -Force -ErrorAction SilentlyContinue
     }
     Remove-Item -LiteralPath $signedPath,$pfxPath,$cerPath -Force -ErrorAction SilentlyContinue
