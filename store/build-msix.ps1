@@ -4,7 +4,7 @@ Build an unsigned MSIX candidate from canonical registration JSON only.
 Never signs, installs, uploads, submits, or publishes. Missing official data blocks the build.
 #>
 [CmdletBinding()]
-param([switch]$PreflightOnly, [switch]$QaUnsigned, [string]$Version, [string]$AssetsDirectory = "", [string]$PythonExe = "python")
+param([switch]$PreflightOnly, [switch]$QaUnsigned, [switch]$ProvisionalCandidate, [string]$Version, [string]$AssetsDirectory = '', [string]$PythonExe = 'python')
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $ExpectedBranch = "codex/store-p0-data-contract-20261023"
@@ -29,7 +29,13 @@ function Write-PreflightReport {
     $ReadyText = if ($Report.ready) { "true" } else { "false" }
     if ($env:GITHUB_OUTPUT) {
         Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "ready=$ReadyText" -Encoding UTF8
-        Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "approved_version=$([string]$Report.version_to_build)" -Encoding UTF8
+        $hasCandidateStatus = @($Report.PSObject.Properties.Name) -contains 'candidate_status'
+        if ($hasCandidateStatus -and $Report.candidate_status -eq 'PROVISIONAL_NOT_OWNER_APPROVED') {
+            Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "candidate_version=$([string]$Report.version_to_build)" -Encoding UTF8
+            Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "candidate_owner_approved=false" -Encoding UTF8
+        } else {
+            Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "approved_version=$([string]$Report.version_to_build)" -Encoding UTF8
+        }
     }
     if ($env:GITHUB_STEP_SUMMARY) {
         $Summary = @("# Data Contract Auditor - Store MSIX preflight","","- Readiness: **$ReadyText**","- Store ID candidate: $($Report.store_id)","- Version: $($Report.version_to_build)","- Certification: **NOT AUTHORIZED**","- Sales release: **HOLD**","","## Blockers")
@@ -49,11 +55,24 @@ if ($RemoteUrl -notmatch '(?i)github[.]com[:/]shihuiarenjinba-png/csv-import-val
 Invoke-GitText -GitArguments @("fetch","origin") | Out-Null
 $Branch = Invoke-GitText -GitArguments @("branch","--show-current")
 $SourceSha = Invoke-GitText -GitArguments @("rev-parse","HEAD")
-$RemoteSha = Invoke-GitText -GitArguments @("rev-parse",("origin/" + $ExpectedBranch))
 $DirtyState = Invoke-GitText -GitArguments @("status","--porcelain","--untracked-files=all")
-if ($Branch -cne $ExpectedBranch) { throw "Wrong working branch: $Branch; expected $ExpectedBranch" }
+if ($QaUnsigned -and $ProvisionalCandidate) { throw 'QA_UNSIGNED and ProvisionalCandidate are mutually exclusive.' }
+$AllowedBranches = if ($QaUnsigned -or $ProvisionalCandidate) {
+    @($ExpectedBranch, "codex/dca-per-user-qa-current-20261128")
+} else {
+    @($ExpectedBranch)
+}
+if ($Branch -notin $AllowedBranches) {
+    throw "Wrong working branch for this build mode: $Branch; allowed: $($AllowedBranches -join ', ')"
+}
+$ExpectedRemoteBranch = if (($QaUnsigned -or $ProvisionalCandidate) -and $Branch -eq "codex/dca-per-user-qa-current-20261128") {
+    $Branch
+} else {
+    $ExpectedBranch
+}
+$RemoteSha = Invoke-GitText -GitArguments @("rev-parse",("origin/" + $ExpectedRemoteBranch))
 if ($SourceSha -notmatch "^[0-9a-f]{40}$" -or $RemoteSha -cne $SourceSha) {
-    throw "Local and remote HEAD must be the same full commit SHA."
+    throw "Local HEAD must match origin/$ExpectedRemoteBranch exactly."
 }
 if (-not [string]::IsNullOrWhiteSpace($DirtyState)) { throw "Uncommitted changes exist; no preflight or packaging writes allowed." }
 
@@ -71,7 +90,21 @@ if ($LASTEXITCODE -ne 0) { throw "Store config validator failed: $Raw" }
 try { $Report = ($Raw | Out-String) | ConvertFrom-Json } catch { throw "Store config validator did not return valid JSON." }
 $AllBlockers = @($Report.blockers) + @($ExtraBlockers)
 $Report.blockers = @($AllBlockers | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -Unique)
-$Report.ready = (@($Report.blockers).Count -eq 0)
+if ($ProvisionalCandidate) {
+    if ($Version -cne '1.0.1.0') { throw 'ProvisionalCandidate is restricted to the requested candidate version 1.0.1.0.' }
+    $versionOnlyBlocker = 'Requested version does not exactly match approvedStoreVersion.'
+    $unexpectedBlockers = @($Report.blockers | Where-Object { $_ -cne $versionOnlyBlocker })
+    if ($unexpectedBlockers.Count -gt 0) { throw ('Provisional candidate preflight has non-version blockers: ' + ($unexpectedBlockers -join '; ')) }
+    $Report.blockers = @()
+    $Report.ready = $true
+    $Report | Add-Member -NotePropertyName candidate_status -NotePropertyValue 'PROVISIONAL_NOT_OWNER_APPROVED' -Force
+    $Report | Add-Member -NotePropertyName owner_version_approval -NotePropertyValue $false -Force
+    $Report | Add-Member -NotePropertyName formal_adoption_allowed -NotePropertyValue $false -Force
+    $Report | Add-Member -NotePropertyName upload_approved -NotePropertyValue $false -Force
+    $Report.version_to_build = $Version
+} else {
+    $Report.ready = (@($Report.blockers).Count -eq 0)
+}
 if ($PreflightOnly) { Write-PreflightReport -Report $Report -Directory $PreflightDir; return }
 
 $Product = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -113,11 +146,12 @@ if ($QaUnsigned) {
     Write-Host 'QA_UNSIGNED_MODE=TRUE'
     Write-Host 'STORE_SUBMISSION_AUTHORIZED=FALSE'
 } else {
-    $PackageVersion = [string]$Report.version_to_build
+    $PackageVersion = if ($ProvisionalCandidate) { $Version } else { [string]$Report.version_to_build }
     $PackageLanguages = @($Registration.manifestResources)
     $PackageAssetsDirectory = ""
 }
-$Tag = (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + [Guid]::NewGuid().ToString("N").Substring(0,8)
+$TagPrefix = if ($ProvisionalCandidate) { "provisional-not-approved-" } else { "" }
+$Tag = $TagPrefix + (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + [Guid]::NewGuid().ToString("N").Substring(0,8)
 $OutputRoot = Join-Path $OutputBase $Tag
 if (Test-Path -LiteralPath $OutputRoot) { throw "Refusing to overwrite existing output directory: $OutputRoot" }
 New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
@@ -207,7 +241,7 @@ if ($QaUnsigned) {
 } else {
     $PackageFileName = "DataContractSchemaDrift_" + $PackageVersion + "_x64.msix"
     $SignatureStatus = "UNSIGNED_STORE_CANDIDATE"
-    $CreatedMarker = "FORMAL_UNSIGNED_MSIX_CREATED"
+    $CreatedMarker = if ($ProvisionalCandidate) { "PROVISIONAL_UNSIGNED_STORE_CANDIDATE_CREATED" } else { "FORMAL_UNSIGNED_MSIX_CREATED" }
 }
 $PackagePath = Join-Path $OutputRoot $PackageFileName
 if (Test-Path -LiteralPath $PackagePath) { throw "Refusing to overwrite existing MSIX: $PackagePath" }
@@ -237,7 +271,11 @@ if ($QaUnsigned) {
         note = 'QA structural package verification only; Store submission remains unauthorized.'
     }
 } else {
-    $VerifyOutput = & $BuildPython $VerifierPath --msix $PackagePath --json
+    if ($ProvisionalCandidate) {
+        $VerifyOutput = & $BuildPython $VerifierPath --msix $PackagePath --provisional-version $PackageVersion --json
+    } else {
+        $VerifyOutput = & $BuildPython $VerifierPath --msix $PackagePath --json
+    }
     if ($LASTEXITCODE -ne 0) { throw "Python MSIX verifier failed: $VerifyOutput" }
     $Verification = ($VerifyOutput | Out-String) | ConvertFrom-Json
     if (-not $Verification.valid) { throw ("MSIX verifier reported blockers: " + (@($Verification.blockers) -join "; ")) }
@@ -261,11 +299,17 @@ $Evidence = [ordered]@{
     signature_status = $SignatureStatus
     certification_submission = "NOT_AUTHORIZED"
     sales_release = "HOLD"
+    candidate_status = if ($ProvisionalCandidate) { "PROVISIONAL_NOT_OWNER_APPROVED" } else { "OWNER_VERSION_APPROVED_CANDIDATE" }
+    owner_version_approval = -not $ProvisionalCandidate
+    upload_approved = $false
+    certification_submission_authorized = $false
+    publish_authorized = $false
     created_utc = [DateTime]::UtcNow.ToString("o")
 }
 $Evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $OutputRoot "BUILD_EVIDENCE.json") -Encoding UTF8
 $Verification | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $OutputRoot "MSIX_VERIFICATION.json") -Encoding UTF8
 $Report | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $OutputRoot "STORE_PREFLIGHT.json") -Encoding UTF8
+if ($ProvisionalCandidate) { $Evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $OutputRoot "PROVISIONAL_CANDIDATE_NOT_APPROVED.json") -Encoding UTF8 }
 Write-Output ($CreatedMarker + "=" + $PackagePath)
 Write-Output "SOURCE_SHA=$SourceSha"
 Write-Output "EXE_SHA256=$ExeHash"

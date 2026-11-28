@@ -13,11 +13,22 @@ from pathlib import Path
 
 
 def sha256(path: Path) -> str:
+    """Hash output files as raw bytes; used only for QA result evidence."""
     h = hashlib.sha256()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def canonical_source_sha256(path: Path, root: Path) -> str:
+    """Hash the committed Git blob, independent of checkout filters and line endings."""
+    relative = path.resolve().relative_to(root.resolve()).as_posix()
+    result = subprocess.run(
+        ["git", "cat-file", "blob", f"HEAD:{relative}"],
+        cwd=root, capture_output=True, check=True,
+    )
+    return hashlib.sha256(result.stdout).hexdigest()
 
 
 def git_text(root: Path, *args: str) -> str:
@@ -131,6 +142,10 @@ def main() -> int:
 
     source_sha = git_text(root, "rev-parse", "HEAD")
     source_branch = git_text(root, "branch", "--show-current")
+    source_status = git_text(root, "status", "--porcelain", "--untracked-files=all")
+    source_worktree_clean = not bool(source_status)
+    source_status_sha256 = hashlib.sha256(source_status.encode("utf-8")).hexdigest()
+    driver_sha256 = canonical_source_sha256(Path(__file__).resolve(), root)
 
     checks: list[dict] = []
 
@@ -215,7 +230,13 @@ def main() -> int:
         # UI contract and workflow smoke on the real Windows desktop Python/Tk stack.
         from tkinter import messagebox
         from app import DataContractAuditApp
+        from app_paths import default_results_directory
         from i18n import install_bilingual_ui, set_language
+
+        expected_default_output = (Path(os.environ["LOCALAPPDATA"]) / "DataContractAuditor" / "Results").resolve()
+        if default_results_directory().resolve() != expected_default_output:
+            raise AssertionError("Default DCA results folder is not per-user LOCALAPPDATA")
+        passed("writable_default_output", {"path": str(expected_default_output)})
 
         layout = []
         for scale in (96 / 72, 120 / 72, 144 / 72):
@@ -248,10 +269,13 @@ def main() -> int:
 
         if str(app.compare_button.cget("state")) != "disabled":
             raise AssertionError("Compare should start disabled")
+        app_default_output = Path(app.output_dir.get()).resolve()
+        if app_default_output != expected_default_output:
+            raise AssertionError("GUI output field differs from the untouched LOCALAPPDATA default")
+        runs_before = {p.resolve() for p in expected_default_output.glob("drift_audit_*") if p.is_dir()}
         app.baseline.set(str(baseline))
         app.current.set(str(current))
         app.keys.set("id")
-        app.output_dir.set(str(work / "ui-output"))
         app.update()
         if str(app.compare_button.cget("state")) != "normal":
             raise AssertionError("Compare did not enable after two inputs")
@@ -260,7 +284,27 @@ def main() -> int:
         wait_until(app, lambda: not app._running)
         if not app._findings:
             raise AssertionError("UI comparison produced no findings")
+        new_runs = [p.resolve() for p in expected_default_output.glob("drift_audit_*")
+                    if p.is_dir() and p.resolve() not in runs_before]
+        if len(new_runs) != 1:
+            raise AssertionError(f"Expected exactly one new result folder under default LOCALAPPDATA; got {len(new_runs)}")
+        default_result = new_runs[0]
+        required_outputs = {"data_drift_audit.json", "data_drift_findings.csv", "generated_contract.json"}
+        actual_outputs = {p.name for p in default_result.iterdir() if p.is_file()}
+        if not required_outputs.issubset(actual_outputs):
+            raise AssertionError(f"Default output folder is missing results: {sorted(required_outputs - actual_outputs)}")
+        default_report = json.loads((default_result / "data_drift_audit.json").read_text(encoding="utf-8"))
+        default_contract = json.loads((default_result / "generated_contract.json").read_text(encoding="utf-8"))
+        default_findings = pd.read_csv(default_result / "data_drift_findings.csv", encoding="utf-8-sig")
+        if (len(default_report.get("findings", [])) != len(app._findings)
+                or len(default_findings) != len(app._findings)
+                or not isinstance(default_contract, dict)):
+            raise AssertionError("Default LOCALAPPDATA results do not match the GUI findings")
         passed("ui_compare_workflow", {"findings": len(app._findings), "status": app.status.get()})
+        passed("default_output_files_written", {
+            "path": str(default_result), "files": sorted(actual_outputs),
+            "finding_count": len(app._findings),
+        })
 
         app.current.set(str(invalid))
         app.run_audit()
@@ -292,6 +336,10 @@ def main() -> int:
         "product": "Data Contract Auditor",
         "source_branch": source_branch,
         "source_sha": source_sha,
+        "source_worktree_clean": source_worktree_clean,
+        "source_status_sha256": source_status_sha256,
+        "driver_sha256": driver_sha256,
+        "execution_type": "SOURCE_GUI_DRIVER_SYNTHETIC_DATA",
         "platform": platform.platform(),
         "python": platform.python_version(),
         "status": "PASS",
