@@ -271,7 +271,11 @@ if ($QaUnsigned) {
         note = 'QA structural package verification only; Store submission remains unauthorized.'
     }
 } else {
-    $VerifyOutput = & $BuildPython $VerifierPath --msix $PackagePath --json
+    if ($ProvisionalCandidate) {
+        $VerifyOutput = & $BuildPython $VerifierPath --msix $PackagePath --provisional-version $PackageVersion --json
+    } else {
+        $VerifyOutput = & $BuildPython $VerifierPath --msix $PackagePath --json
+    }
     if ($LASTEXITCODE -ne 0) { throw "Python MSIX verifier failed: $VerifyOutput" }
     $Verification = ($VerifyOutput | Out-String) | ConvertFrom-Json
     if (-not $Verification.valid) { throw ("MSIX verifier reported blockers: " + (@($Verification.blockers) -join "; ")) }

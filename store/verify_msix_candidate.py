@@ -21,16 +21,25 @@ NS = {
 EXPECTED_MIN_VERSION = "10.0.17763.0"
 
 
-def verify_msix(root: Path, msix: Path, version: str | None = None) -> dict:
+def verify_msix(root: Path, msix: Path, version: str | None = None, *, provisional: bool = False) -> dict:
     root = Path(root).resolve()
     msix = Path(msix).resolve()
     blockers: list[str] = []
+    if provisional and (not version or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+\.0", version)):
+        blockers.append("A provisional candidate requires an explicit four-part version with revision zero.")
     preflight = validate_config(root, version)
-    blockers.extend(preflight["blockers"])
     product = json.loads((root / "store" / "product.json").read_text(encoding="utf-8"))
     record = json.loads((root / "store" / "partner_center_registration.json").read_text(encoding="utf-8"))
     identity = record.get("storeIdentity") or {}
-    expected_version = preflight.get("version_to_build")
+    approved_version = record.get("approvedStoreVersion")
+    expected_version = version if provisional else preflight.get("version_to_build")
+    preflight_blockers = list(preflight["blockers"])
+    if provisional:
+        if version == approved_version:
+            blockers.append("A provisional version must remain distinct from approvedStoreVersion.")
+        preflight_blockers = [item for item in preflight_blockers
+                              if item != "Requested version does not exactly match approvedStoreVersion."]
+    blockers.extend(preflight_blockers)
     try:
         if msix.suffix.lower() != ".msix" or not msix.is_file():
             blockers.append("MSIX file does not exist or path is not .msix.")
@@ -111,7 +120,7 @@ def verify_msix(root: Path, msix: Path, version: str | None = None) -> dict:
             "signature_status": "QA_UNSIGNED_EXPECTED",
         }
     blockers = list(dict.fromkeys(blockers))
-    return {
+    result = {
         "valid": not blockers,
         "product": record.get("displayName"),
         "store_id": identity.get("storeId"),
@@ -121,6 +130,10 @@ def verify_msix(root: Path, msix: Path, version: str | None = None) -> dict:
         "sales_release": "HOLD",
         "blockers": blockers,
     }
+    if provisional:
+        result.update({"candidate_status": "PROVISIONAL_NOT_OWNER_APPROVED",
+                       "owner_version_approved": False, "upload_approved": False})
+    return result
 
 
 def main() -> int:
@@ -128,9 +141,13 @@ def main() -> int:
     parser.add_argument("--msix", type=Path, required=True)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--version")
+    parser.add_argument("--provisional-version", help="Verify a distinct, unapproved candidate version without changing registration data.")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-    result = verify_msix(args.root, args.msix, args.version)
+    if args.version and args.provisional_version:
+        parser.error("--version and --provisional-version cannot be combined")
+    provisional = args.provisional_version is not None
+    result = verify_msix(args.root, args.msix, args.provisional_version or args.version, provisional=provisional)
     print(json.dumps(result, indent=2, ensure_ascii=False) if args.json else json.dumps(result, ensure_ascii=False))
     return 0 if result["valid"] else 1
 

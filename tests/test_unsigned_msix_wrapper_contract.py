@@ -31,6 +31,7 @@ class BuilderSourceSafetyTests(unittest.TestCase):
         self.assertIn("Requested version does not exactly match approvedStoreVersion.", text)
         self.assertIn("non-version blockers", text)
         self.assertIn("PROVISIONAL_NOT_OWNER_APPROVED", text)
+        self.assertIn("--provisional-version $PackageVersion", text)
         self.assertIn("-NotePropertyName owner_version_approval -NotePropertyValue $false", text)
         self.assertIn("-NotePropertyName upload_approved -NotePropertyValue $false", text)
         self.assertIn("certification_submission_authorized = $false", text)

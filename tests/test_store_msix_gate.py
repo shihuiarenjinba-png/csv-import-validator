@@ -172,9 +172,9 @@ class StoreGateTests(unittest.TestCase):
         self.assertIn('UNSIGNED_STORE_CANDIDATE', script)
         self.assertIn('FORMAL_UNSIGNED_MSIX_CREATED', script)
 
-    def _make_msix(self, path: Path, display_name: str = "Data Contract Auditor"):
+    def _make_msix(self, path: Path, display_name: str = "Data Contract Auditor", version: str = "1.0.0.0"):
         manifest = f'''<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10">
-<Identity Name="OkinawaDesktopTools.DataContractAuditor" Publisher="CN=TEST-ONLY" Version="1.0.0.0" ProcessorArchitecture="x64"/>
+<Identity Name="OkinawaDesktopTools.DataContractAuditor" Publisher="CN=TEST-ONLY" Version="{version}" ProcessorArchitecture="x64"/>
 <Properties><DisplayName>{display_name}</DisplayName><PublisherDisplayName>Test Publisher</PublisherDisplayName></Properties>
 <Resources><Resource Language="en-US"/><Resource Language="ja-JP"/></Resources>
 <Dependencies><TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0"/></Dependencies>\n<Applications><Application Id="DataContractSchemaDrift" Executable="App\\DataContractSchemaDrift.exe"><uap:VisualElements DisplayName="{display_name}" Description="Test" BackgroundColor="transparent" Square150x150Logo="Assets/Square150x150Logo.png" Square44x44Logo="Assets/Square44x44Logo.png"/></Application></Applications>
@@ -191,6 +191,28 @@ class StoreGateTests(unittest.TestCase):
         self._make_msix(package)
         result = verify_msix(self.root, package)
         self.assertTrue(result["valid"], result["blockers"])
+
+    def test_provisional_msix_version_is_checked_without_promoting_registration(self):
+        self._write_config()
+        package = self.root / "provisional.msix"
+        self._make_msix(package, version="1.0.1.0")
+        result = verify_msix(self.root, package, "1.0.1.0", provisional=True)
+        self.assertTrue(result["valid"], result["blockers"])
+        self.assertEqual(result["version"], "1.0.1.0")
+        self.assertEqual(result["candidate_status"], "PROVISIONAL_NOT_OWNER_APPROVED")
+        self.assertFalse(result["owner_version_approved"])
+        self.assertFalse(result["upload_approved"])
+        record = json.loads((self.root / "store" / "partner_center_registration.json").read_text(encoding="utf-8"))
+        self.assertEqual(record["approvedStoreVersion"], "1.0.0.0")
+
+    def test_provisional_verifier_does_not_mask_non_version_preflight_blockers(self):
+        self.registration["identityFieldVerification"]["packageIdentityName"] = "UNCONFIRMED"
+        self._write_config()
+        package = self.root / "provisional.msix"
+        self._make_msix(package, version="1.0.1.0")
+        result = verify_msix(self.root, package, "1.0.1.0", provisional=True)
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("not live-verified" in item for item in result["blockers"]))
 
     def test_msix_wrong_min_version_is_rejected(self):
         self._write_config()
