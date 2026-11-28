@@ -123,7 +123,7 @@ jobs:
           $evidence = Join-Path $env:RUNNER_TEMP 'dca-gui-qa'
           python scripts/local_real_device_qa.py --evidence-dir $evidence
           if ($LASTEXITCODE -ne 0) { throw "DCA product GUI smoke failed: $LASTEXITCODE" }
-          $evidenceRoot = Join-Path $PWD 'store-output\\qa-evidence'
+          $evidenceRoot = Join-Path $PWD 'store-output\qa-evidence'
           New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
           Copy-Item -LiteralPath $evidence -Destination (Join-Path $evidenceRoot 'gui') -Recurse
           Write-Host 'WINDOWS_SERVER_GUI_DATA_DRIVER=PASS; WINDOWS_10_11_VISUAL_DPI=NOT_RUN'
@@ -138,7 +138,7 @@ jobs:
             -ExpectedPublisher 'CN=46263F21-A700-41DB-8C9B-114C22FB82FC' `
             -ExpectedIdentity 'OkinawaDesktopTools.DataContractAuditor' -EvidencePath $receipt
           if ($LASTEXITCODE -ne 0) { throw "DCA test sign/install/activation failed: $LASTEXITCODE" }
-          Copy-Item -LiteralPath $receipt -Destination (Join-Path (Join-Path $PWD 'store-output\\qa-evidence') 'test-sign-install.json')
+          Copy-Item -LiteralPath $receipt -Destination (Join-Path (Join-Path $PWD 'store-output\qa-evidence') 'test-sign-install.json')
           Write-Host 'TEST_SIGNED_DERIVATIVE_ONLY=TRUE; FIXED_1_0_0_0_PACKAGE_UNCHANGED=TRUE'
       - name: Preserve QA-only MSIX and hash evidence
         uses: actions/upload-artifact@v7
