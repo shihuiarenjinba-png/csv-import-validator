@@ -23,7 +23,7 @@ def sha256(path: Path) -> str:
 
 def canonical_source_sha256(path: Path) -> str:
     """Hash Python source independent of Windows CRLF checkout conversion."""
-    source = path.read_bytes().replace(b"\\r\\n", b"\\n")
+    source = path.read_bytes().replace(b"\r\n", b"\n")
     return hashlib.sha256(source).hexdigest()
 
 
