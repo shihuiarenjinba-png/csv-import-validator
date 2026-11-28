@@ -24,6 +24,32 @@ class BuilderSourceSafetyTests(unittest.TestCase):
         self.assertEqual(self.script.count('$SignatureStatus = "QA_UNSIGNED"'), 1)
         self.assertEqual(self.script.count('$SignatureStatus = "UNSIGNED_STORE_CANDIDATE"'), 1)
 
+    def test_provisional_1_0_1_candidate_never_mutates_owner_approval(self):
+        text = self.script
+        self.assertIn("[switch]$ProvisionalCandidate", text)
+        self.assertIn("ProvisionalCandidate is restricted to the requested candidate version 1.0.1.0.", text)
+        self.assertIn("Requested version does not exactly match approvedStoreVersion.", text)
+        self.assertIn("non-version blockers", text)
+        self.assertIn("PROVISIONAL_NOT_OWNER_APPROVED", text)
+        self.assertIn("owner_version_approval = $false", text)
+        self.assertIn("upload_approved = $false", text)
+        self.assertIn("certification_submission_authorized = $false", text)
+        self.assertIn("publish_authorized = $false", text)
+        self.assertIn("QA_UNSIGNED and ProvisionalCandidate are mutually exclusive.", text)
+        self.assertIn("candidate_version=$([string]$Report.version_to_build)", text)
+        self.assertNotIn("Set-Content -LiteralPath $RegistrationPath", text)
+
+    def test_workflow_requires_explicit_dispatch_for_provisional_candidate(self):
+        self.assertIn("build_provisional_1_0_1_0", self.workflow)
+        self.assertIn("github.event_name == 'workflow_dispatch'", self.workflow)
+        self.assertIn("inputs.build_provisional_1_0_1_0", self.workflow)
+        self.assertIn("ref: 7aeeaa42f4d4c14df46e6d090df82716ee23df0b", self.workflow)
+        self.assertIn("test_sign_msix_copy.ps1", self.workflow)
+        self.assertIn("PROVISIONAL_NOT_OWNER_APPROVED", self.workflow)
+        self.assertIn("data-contract-provisional-not-approved-1.0.1.0", self.workflow)
+        self.assertIn("windows-all-auto", self.workflow)
+        self.assertNotIn("Submit for certification", self.workflow)
+
     def test_origin_branch_commit_and_clean_worktree_before_outputs(self):
         text = self.script
         repo_check = text.index("if ($RemoteUrl -notmatch")
@@ -57,7 +83,8 @@ class BuilderSourceSafetyTests(unittest.TestCase):
 
     def test_workflow_runs_source_gui_and_test_signed_derivative_only(self):
         self.assertIn("scripts/local_real_device_qa.py", self.workflow)
-        self.assertIn("store/qa_test_sign_install.ps1", self.workflow)
+        self.assertIn("test_sign_msix_copy.ps1", self.workflow)
+        self.assertIn("7aeeaa42f4d4c14df46e6d090df82716ee23df0b", self.workflow)
         self.assertIn("FIXED_1_0_0_0_PACKAGE_UNCHANGED=TRUE", self.workflow)
         self.assertIn("WINDOWS_10_11_VISUAL_DPI=NOT_RUN", self.workflow)
 

@@ -115,6 +115,13 @@ class StoreGateTests(unittest.TestCase):
         self.assertTrue(any("packageIdentityName" in x for x in result["blockers"]))
         self.assertTrue(any("state is not confirmed" in x for x in result["blockers"]))
 
+    def test_proposed_1_0_1_0_remains_unapproved_in_canonical_profile(self):
+        self._write_config()
+        result = validate_config(self.root, "1.0.1.0")
+        self.assertFalse(result["ready"])
+        self.assertEqual(self.registration["approvedStoreVersion"], "1.0.0.0")
+        self.assertTrue(any("does not exactly match approvedStoreVersion" in blocker
+                            for blocker in result["blockers"]))
     def test_version_must_match_approved_four_part_revision_zero_value(self):
         self._write_config()
         for bad in ("1.0.0.15", "1.0.0", "2.0.0.0"):

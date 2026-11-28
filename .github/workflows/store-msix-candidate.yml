@@ -9,6 +9,12 @@ on:
     branches:
       - codex/store-p0-data-contract-20261023
   workflow_dispatch:
+    inputs:
+      build_provisional_1_0_1_0:
+        description: Build and QA an unsigned 1.0.1.0 candidate; this does not approve upload
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -70,7 +76,7 @@ jobs:
     needs: regression-preflight
     if: always() && needs.regression-preflight.result == 'success'
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - name: Checkout dedicated work branch
         uses: actions/checkout@v7
@@ -130,25 +136,67 @@ jobs:
           New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
           Copy-Item -LiteralPath $evidence -Destination (Join-Path $evidenceRoot 'gui') -Recurse
           Write-Host 'WINDOWS_SERVER_GUI_DATA_DRIVER=PASS; WINDOWS_10_11_VISUAL_DPI=NOT_RUN'
-      - name: Test-sign a separate QA copy, install and activate on the ephemeral runner
+      - name: Checkout shared Windows-all-auto MSIX QA helper
+        uses: actions/checkout@v4
+        with:
+          repository: shihuiarenjinba-png/Windows-all-auto
+          ref: 7aeeaa42f4d4c14df46e6d090df82716ee23df0b
+          path: _shared-windows-all-auto
+      - name: Test-sign a separate QA_UNSIGNED copy and perform process-launch smoke
+        timeout-minutes: 15
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $package = Get-ChildItem -LiteralPath 'store-output' -Recurse -File -Filter 'DataContractSchemaDrift_QA_UNSIGNED_*.msix' | Select-Object -First 1
           if (-not $package) { throw 'QA_UNSIGNED product MSIX was not found.' }
-          $receipt = Join-Path $env:RUNNER_TEMP 'dca-test-sign-install.json'
-          ./store/qa_test_sign_install.ps1 -PackagePath $package.FullName `
-            -ExpectedPublisher 'CN=46263F21-A700-41DB-8C9B-114C22FB82FC' `
-            -ExpectedIdentity 'OkinawaDesktopTools.DataContractAuditor' -EvidencePath $receipt
-          if ($LASTEXITCODE -ne 0) { throw "DCA test sign/install/activation failed: $LASTEXITCODE" }
-          Copy-Item -LiteralPath $receipt -Destination (Join-Path (Join-Path $PWD 'store-output\qa-evidence') 'test-sign-install.json')
-          Write-Host 'TEST_SIGNED_DERIVATIVE_ONLY=TRUE; FIXED_1_0_0_0_PACKAGE_UNCHANGED=TRUE'
+          $buildEvidencePath = Join-Path $package.DirectoryName 'BUILD_EVIDENCE.json'
+          if (-not (Test-Path -LiteralPath $buildEvidencePath)) { throw 'Builder SHA evidence was not found next to the package.' }
+          $build = Get-Content -LiteralPath $buildEvidencePath -Raw | ConvertFrom-Json
+          $actual = (Get-FileHash -LiteralPath $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -cne ([string]$build.msix_sha256).ToLowerInvariant()) { throw 'Local QA package SHA differs from its builder evidence.' }
+          $product = Get-Content -LiteralPath 'store/product.json' -Raw | ConvertFrom-Json
+          $qaOut = Join-Path $env:RUNNER_TEMP 'dca-shared-msix-qa'
+          & .\_shared-windows-all-auto\scripts\test_sign_msix_copy.ps1 -Package $package.FullName -ExpectedSha256 $build.msix_sha256 -IdentityName 'OkinawaDesktopTools.DataContractAuditor' -Publisher 'CN=46263F21-A700-41DB-8C9B-114C22FB82FC' -Version $build.msix_version -Architecture x64 -ApplicationId $product.appId -LaunchMode ProcessLaunch -OperationTimeoutSeconds 300 -OutputDirectory $qaOut
+          if ($LASTEXITCODE -ne 0) { throw "Shared test-sign/install/launch helper failed: $LASTEXITCODE" }
+          $evidenceRoot = Join-Path $PWD 'store-output\qa-evidence\test-sign-install'
+          New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
+          Copy-Item -Path (Join-Path $qaOut '*.json') -Destination $evidenceRoot -Force
+          Write-Host 'DCA_SOURCE_GUI_FUNCTION_QA_IS_RECORDED_SEPARATELY=TRUE'
+          Write-Host 'TEST_SIGNED_DERIVATIVE_ONLY=TRUE; STORE_UPLOAD=FALSE'
+          Write-Host 'FIXED_1_0_0_0_PACKAGE_UNCHANGED=TRUE'
+      - name: Finalize interrupted test-sign/install receipt
+        if: always()
+        shell: pwsh
+        run: |
+          $qaOut = Join-Path $env:RUNNER_TEMP 'dca-shared-msix-qa'
+          $evidenceRoot = Join-Path $PWD 'store-output\qa-evidence\test-sign-install'
+          if (Test-Path -LiteralPath $qaOut) {
+            New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
+            Get-ChildItem -LiteralPath $qaOut -File -Filter 'test-signature-qa-receipt-*.json' | ForEach-Object {
+              $receipt = Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json
+              if ($receipt.status -eq 'RUNNING') {
+                $receipt.status = 'INTERRUPTED_OR_STEP_TIMEOUT'
+                $receipt.failure = 'The Actions step ended before a phase completion was recorded.'
+                if ($receipt.phase_timings -and $receipt.phase_timings.Count -gt 0 -and $receipt.phase_timings[-1].status -eq 'RUNNING') {
+                  $last = $receipt.phase_timings[-1]
+                  $last.status = 'INTERRUPTED_OR_STEP_TIMEOUT'
+                  $last.elapsed_ms = [int64](([DateTime]::UtcNow - [DateTime]::Parse($last.started_at_utc).ToUniversalTime()).TotalMilliseconds)
+                }
+                $tmp = $_.FullName + '.tmp'
+                $receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $tmp -Encoding UTF8
+                Move-Item -LiteralPath $tmp -Destination $_.FullName -Force
+              }
+              Copy-Item -LiteralPath $_.FullName -Destination $evidenceRoot -Force
+            }
+            Get-ChildItem -LiteralPath $qaOut -File -Filter 'test-signature-derivative-*.json' | Copy-Item -Destination $evidenceRoot -Force
+          }
       - name: Preserve QA-only MSIX and hash evidence
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: data-contract-QA_UNSIGNED-validation-msix-${{ github.run_id }}-${{ github.run_attempt }}
           path: store-output/**
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
 
   build-unsigned-candidate:
@@ -175,4 +223,89 @@ jobs:
           name: data-contract-QA_UNSIGNED-msix-${{ github.run_id }}
           path: store-output/**
           if-no-files-found: error
+          retention-days: 30
+
+  build-provisional-1-0-1-candidate:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/dca-per-user-qa-current-20261128' && inputs.build_provisional_1_0_1_0
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout DCA source and candidate builder
+        uses: actions/checkout@v7
+        with:
+          ref: codex/dca-per-user-qa-current-20261128
+          fetch-depth: 0
+      - name: Checkout pinned shared MSIX test-sign/install helper
+        uses: actions/checkout@v4
+        with:
+          repository: shihuiarenjinba-png/Windows-all-auto
+          ref: 7aeeaa42f4d4c14df46e6d090df82716ee23df0b
+          path: _shared-windows-all-auto
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install application dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run product regression tests
+        run: python -m unittest discover -s tests -p 'test*.py' -v
+      - name: Build explicitly provisional 1.0.1.0 candidate
+        shell: pwsh
+        run: ./store/build-msix.ps1 -ProvisionalCandidate -Version 1.0.1.0
+      - name: Run product GUI/data driver against synthetic fixtures
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $evidence = Join-Path $env:RUNNER_TEMP 'dca-1-0-1-product-qa'
+          python scripts/local_real_device_qa.py --evidence-dir $evidence
+          if ($LASTEXITCODE -ne 0) { throw "DCA product GUI/data driver failed: $LASTEXITCODE" }
+          $evidenceRoot = Join-Path $PWD 'store-output\qa-evidence\provisional-1.0.1.0'
+          New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
+          Copy-Item -LiteralPath $evidence -Destination (Join-Path $evidenceRoot 'source-gui') -Recurse
+          Write-Host 'WINDOWS_SERVER_PRODUCT_GUI_DATA_DRIVER=PASS; WINDOWS_10_11_VISUAL_DPI=NOT_RUN'
+      - name: Test-sign a copy of the provisional 1.0.1.0 package and install/launch
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $candidate = Get-ChildItem -LiteralPath 'store-output' -Recurse -File -Filter 'DataContractSchemaDrift_1.0.1.0_x64.msix' | Select-Object -First 1
+          if (-not $candidate) { throw 'Provisional 1.0.1.0 MSIX is missing.' }
+          $build = Get-Content -LiteralPath (Join-Path $candidate.DirectoryName 'BUILD_EVIDENCE.json') -Raw | ConvertFrom-Json
+          if ($build.candidate_status -ne 'PROVISIONAL_NOT_OWNER_APPROVED' -or $build.upload_approved -ne $false) { throw 'Candidate approval boundary is invalid.' }
+          $actual = (Get-FileHash -LiteralPath $candidate.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -cne ([string]$build.msix_sha256).ToLowerInvariant()) { throw 'Candidate SHA differs from builder evidence.' }
+          $product = Get-Content -LiteralPath 'store/product.json' -Raw | ConvertFrom-Json
+          $qaOut = Join-Path $env:RUNNER_TEMP 'dca-provisional-1-0-1-msix-qa'
+          & .\_shared-windows-all-auto\scripts\test_sign_msix_copy.ps1 -Package $candidate.FullName -ExpectedSha256 $build.msix_sha256 -IdentityName 'OkinawaDesktopTools.DataContractAuditor' -Publisher 'CN=46263F21-A700-41DB-8C9B-114C22FB82FC' -Version '1.0.1.0' -Architecture x64 -ApplicationId $product.appId -LaunchMode ProcessLaunch -OperationTimeoutSeconds 300 -OutputDirectory $qaOut
+          if ($LASTEXITCODE -ne 0) { throw "Candidate derivative install/launch failed: $LASTEXITCODE" }
+          $evidenceRoot = Join-Path $PWD 'store-output\qa-evidence\provisional-1.0.1.0\test-sign-install'
+          New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
+          Copy-Item -Path (Join-Path $qaOut '*.json') -Destination $evidenceRoot -Force
+      - name: Finalize provisional candidate phase receipt
+        if: always()
+        shell: pwsh
+        run: |
+          $qaOut = Join-Path $env:RUNNER_TEMP 'dca-provisional-1-0-1-msix-qa'
+          $evidenceRoot = Join-Path $PWD 'store-output\qa-evidence\provisional-1.0.1.0\test-sign-install'
+          if (Test-Path -LiteralPath $qaOut) {
+            New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
+            Get-ChildItem -LiteralPath $qaOut -File -Filter 'test-signature-qa-receipt-*.json' | ForEach-Object {
+              $receipt = Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json
+              if ($receipt.status -eq 'RUNNING') {
+                $receipt.status = 'INTERRUPTED_OR_STEP_TIMEOUT'
+                $receipt.failure = 'The Actions step ended before a phase completion was recorded.'
+                $tmp = $_.FullName + '.tmp'
+                $receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $tmp -Encoding UTF8
+                Move-Item -LiteralPath $tmp -Destination $_.FullName -Force
+              }
+              Copy-Item -LiteralPath $_.FullName -Destination $evidenceRoot -Force
+            }
+          }
+      - name: Preserve provisional candidate and QA evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: data-contract-provisional-not-approved-1.0.1.0
+          path: store-output/**
+          if-no-files-found: warn
           retention-days: 30
