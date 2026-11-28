@@ -13,11 +13,18 @@ from pathlib import Path
 
 
 def sha256(path: Path) -> str:
+    """Hash output files as raw bytes; used only for QA result evidence."""
     h = hashlib.sha256()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def canonical_source_sha256(path: Path) -> str:
+    """Hash Python source independent of Windows CRLF checkout conversion."""
+    source = path.read_bytes().replace(b"\\r\\n", b"\\n")
+    return hashlib.sha256(source).hexdigest()
 
 
 def git_text(root: Path, *args: str) -> str:
@@ -134,7 +141,7 @@ def main() -> int:
     source_status = git_text(root, "status", "--porcelain", "--untracked-files=all")
     source_worktree_clean = not bool(source_status)
     source_status_sha256 = hashlib.sha256(source_status.encode("utf-8")).hexdigest()
-    driver_sha256 = sha256(Path(__file__).resolve())
+    driver_sha256 = canonical_source_sha256(Path(__file__).resolve())
 
     checks: list[dict] = []
 
