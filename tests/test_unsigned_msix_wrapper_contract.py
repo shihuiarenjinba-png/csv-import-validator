@@ -44,7 +44,7 @@ class BuilderSourceSafetyTests(unittest.TestCase):
         self.assertIn("build_provisional_1_0_1_0", self.workflow)
         self.assertIn("github.event_name == 'workflow_dispatch'", self.workflow)
         self.assertIn("inputs.build_provisional_1_0_1_0", self.workflow)
-        self.assertIn("ref: 7aeeaa42f4d4c14df46e6d090df82716ee23df0b", self.workflow)
+        self.assertIn("ref: 7aeeaa445fb3d7a862d1bd5d41d3885be9e5dcdb", self.workflow)
         self.assertIn("test_sign_msix_copy.ps1", self.workflow)
         self.assertIn("PROVISIONAL_NOT_OWNER_APPROVED", self.workflow)
         self.assertIn("data-contract-provisional-not-approved-1.0.1.0", self.workflow)
@@ -85,7 +85,7 @@ class BuilderSourceSafetyTests(unittest.TestCase):
     def test_workflow_runs_source_gui_and_test_signed_derivative_only(self):
         self.assertIn("scripts/local_real_device_qa.py", self.workflow)
         self.assertIn("test_sign_msix_copy.ps1", self.workflow)
-        self.assertIn("7aeeaa42f4d4c14df46e6d090df82716ee23df0b", self.workflow)
+        self.assertIn("7aeeaa445fb3d7a862d1bd5d41d3885be9e5dcdb", self.workflow)
         self.assertIn("FIXED_1_0_0_0_PACKAGE_UNCHANGED=TRUE", self.workflow)
         self.assertIn("WINDOWS_10_11_VISUAL_DPI=NOT_RUN", self.workflow)
 

@@ -140,7 +140,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: shihuiarenjinba-png/Windows-all-auto
-          ref: 7aeeaa42f4d4c14df46e6d090df82716ee23df0b
+          ref: 7aeeaa445fb3d7a862d1bd5d41d3885be9e5dcdb
           path: _shared-windows-all-auto
       - name: Test-sign a separate QA_UNSIGNED copy and perform process-launch smoke
         timeout-minutes: 15
@@ -239,7 +239,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: shihuiarenjinba-png/Windows-all-auto
-          ref: 7aeeaa42f4d4c14df46e6d090df82716ee23df0b
+          ref: 7aeeaa445fb3d7a862d1bd5d41d3885be9e5dcdb
           path: _shared-windows-all-auto
       - name: Set up Python
         uses: actions/setup-python@v7
