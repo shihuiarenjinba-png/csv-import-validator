@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - codex/store-p0-data-contract-20261023
+      - codex/dca-userdata-output-20261128
   workflow_dispatch:
 
 permissions:
@@ -47,11 +48,11 @@ jobs:
       - name: Run source unit tests
         run: python -m unittest discover -s tests -p 'test*.py' -v
       - name: Compile source and packaging scripts
-        run: python -m compileall -q app.py contract_auditor.py validator.py tests store
+        run: python -m compileall -q app.py app_paths.py contract_auditor.py validator.py tests scripts store
       - name: Run Store package readiness preflight
         id: preflight
         shell: pwsh
-        run: ./store/build-msix.ps1 -PreflightOnly
+        run: ./store/build-msix.ps1 -PreflightOnly -QaUnsigned
       - name: Preserve preflight report
         if: always()
         uses: actions/upload-artifact@v7
@@ -74,6 +75,8 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: '3.11'
+      - name: Install DCA GUI smoke dependencies
+        run: python -m pip install -r requirements.txt
       - name: Generate QA-only placeholder package logos
         shell: powershell
         run: |
@@ -110,6 +113,30 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "QA MSIX builder failed: $LASTEXITCODE" }
           Write-Host "QA_UNSIGNED_VERSION=$qaVersion"
           Write-Host 'STORE_SUBMISSION_AUTHORIZED=FALSE'
+      - name: Run reproducible product-specific GUI and data smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $evidence = Join-Path $env:RUNNER_TEMP 'dca-gui-qa'
+          python scripts/local_real_device_qa.py --evidence-dir $evidence
+          if ($LASTEXITCODE -ne 0) { throw "DCA product GUI smoke failed: $LASTEXITCODE" }
+          $evidenceRoot = Join-Path $PWD 'store-output\qa-evidence'
+          New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
+          Copy-Item -LiteralPath $evidence -Destination (Join-Path $evidenceRoot 'gui') -Recurse
+          Write-Host 'WINDOWS_SERVER_GUI_DATA_DRIVER=PASS; WINDOWS_10_11_VISUAL_DPI=NOT_RUN'
+      - name: Test-sign a separate QA copy, install and activate on the ephemeral runner
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Get-ChildItem -LiteralPath 'store-output' -Recurse -File -Filter 'DataContractSchemaDrift_QA_UNSIGNED_*.msix' | Select-Object -First 1
+          if (-not $package) { throw 'QA_UNSIGNED product MSIX was not found.' }
+          $receipt = Join-Path $env:RUNNER_TEMP 'dca-test-sign-install.json'
+          ./store/qa_test_sign_install.ps1 -PackagePath $package.FullName `
+            -ExpectedPublisher 'CN=46263F21-A700-41DB-8C9B-114C22FB82FC' `
+            -ExpectedIdentity 'OkinawaDesktopTools.DataContractAuditor' -EvidencePath $receipt
+          if ($LASTEXITCODE -ne 0) { throw "DCA test sign/install/activation failed: $LASTEXITCODE" }
+          Copy-Item -LiteralPath $receipt -Destination (Join-Path (Join-Path $PWD 'store-output\qa-evidence') 'test-sign-install.json')
+          Write-Host 'TEST_SIGNED_DERIVATIVE_ONLY=TRUE; FIXED_1_0_0_0_PACKAGE_UNCHANGED=TRUE'
       - name: Preserve QA-only MSIX and hash evidence
         uses: actions/upload-artifact@v7
         with:
@@ -141,3 +168,4 @@ jobs:
           path: store-output/**
           if-no-files-found: error
           retention-days: 30
+

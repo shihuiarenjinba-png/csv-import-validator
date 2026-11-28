@@ -7,6 +7,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from contract_auditor import audit_drift, save_audit
+from app_paths import default_results_directory
 from i18n import translate
 from ui_desktop import bind_shortcuts, restore_window_state, save_window_state
 from ui_commandbar import CommandBar
@@ -23,7 +24,7 @@ class DataContractAuditApp(tk.Tk):
         self.baseline = tk.StringVar()
         self.current = tk.StringVar()
         self.keys = tk.StringVar()
-        self.output_dir = tk.StringVar(value=str(Path.cwd() / "data_contract_audit"))
+        self.output_dir = tk.StringVar(value=str(default_results_directory()))
         self.status = tk.StringVar(value="基準ファイルと今回ファイルを選択してください。")
         self.severity_filter = tk.StringVar(value="ALL")
         self._findings: list[dict] = []
@@ -204,3 +205,4 @@ if __name__ == "__main__":
     app = DataContractAuditApp()
     install_bilingual_ui(app)
     app.mainloop()
+

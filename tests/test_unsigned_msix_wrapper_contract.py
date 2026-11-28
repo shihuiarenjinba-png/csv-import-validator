@@ -25,7 +25,7 @@ class BuilderSourceSafetyTests(unittest.TestCase):
     def test_origin_branch_commit_and_clean_worktree_before_outputs(self):
         text = self.script
         repo_check = text.index("if ($RemoteUrl -notmatch")
-        branch_check = text.index("if ($Branch -cne")
+        branch_check = text.index("if ($Branch -notin $AllowedBranches)")
         sha_check = text.index("if ($SourceSha -notmatch")
         dirty_check = text.index("if (-not [string]::IsNullOrWhiteSpace($DirtyState))")
         first_write = text.index("New-Item -ItemType Directory")
@@ -34,6 +34,8 @@ class BuilderSourceSafetyTests(unittest.TestCase):
         self.assertLess(sha_check, dirty_check)
         self.assertLess(dirty_check, first_write)
         self.assertIn("origin/", text)
+        self.assertIn("ExpectedRemoteBranch", text)
+        self.assertIn('"codex/dca-userdata-output-20261128"', text)
         self.assertIn("shihuiarenjinba-png/csv-import-validator", text)
 
     def test_version_identity_and_manifest_guards_present(self):
@@ -51,6 +53,27 @@ class BuilderSourceSafetyTests(unittest.TestCase):
         self.assertIn("ready == 'true'", self.workflow)
         self.assertIn("store/build-msix.ps1", self.workflow)
 
+    def test_workflow_runs_product_gui_data_driver_and_isolated_install_lane(self):
+        self.assertIn("scripts/local_real_device_qa.py", self.workflow)
+        self.assertIn("store/qa_test_sign_install.ps1", self.workflow)
+        self.assertIn("WINDOWS_10_11_VISUAL_DPI=NOT_RUN", self.workflow)
+        self.assertIn("FIXED_1_0_0_0_PACKAGE_UNCHANGED=TRUE", self.workflow)
+
+    def test_test_sign_script_is_github_hosted_only_and_binds_original_payload(self):
+        script = (ROOT / "store" / "qa_test_sign_install.ps1").read_text(encoding="utf-8")
+        guard = script.index("$env:GITHUB_ACTIONS -ne 'true'")
+        signing = script.index("New-SelfSignedCertificate")
+        install = script.index("Add-AppxPackage")
+        cleanup = script.rindex("finally {")
+        self.assertLess(guard, signing)
+        self.assertLess(signing, install)
+        self.assertLess(install, cleanup)
+        self.assertIn("Get-ZipHashes", script)
+        self.assertIn("AppxSignature.p7x", script)
+        self.assertIn("original_unsigned_package_unchanged", script)
+        self.assertIn("Remove-AppxPackage", script)
+
 
 if __name__ == "__main__":
     unittest.main()
+
