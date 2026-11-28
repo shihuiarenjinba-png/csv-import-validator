@@ -49,11 +49,23 @@ if ($RemoteUrl -notmatch '(?i)github[.]com[:/]shihuiarenjinba-png/csv-import-val
 Invoke-GitText -GitArguments @("fetch","origin") | Out-Null
 $Branch = Invoke-GitText -GitArguments @("branch","--show-current")
 $SourceSha = Invoke-GitText -GitArguments @("rev-parse","HEAD")
-$RemoteSha = Invoke-GitText -GitArguments @("rev-parse",("origin/" + $ExpectedBranch))
 $DirtyState = Invoke-GitText -GitArguments @("status","--porcelain","--untracked-files=all")
-if ($Branch -cne $ExpectedBranch) { throw "Wrong working branch: $Branch; expected $ExpectedBranch" }
+$AllowedBranches = if ($QaUnsigned) {
+    @($ExpectedBranch, "codex/dca-per-user-qa-current-20261128")
+} else {
+    @($ExpectedBranch)
+}
+if ($Branch -notin $AllowedBranches) {
+    throw "Wrong working branch for this build mode: $Branch; allowed: $($AllowedBranches -join ', ')"
+}
+$ExpectedRemoteBranch = if ($QaUnsigned -and $Branch -eq "codex/dca-per-user-qa-current-20261128") {
+    $Branch
+} else {
+    $ExpectedBranch
+}
+$RemoteSha = Invoke-GitText -GitArguments @("rev-parse",("origin/" + $ExpectedRemoteBranch))
 if ($SourceSha -notmatch "^[0-9a-f]{40}$" -or $RemoteSha -cne $SourceSha) {
-    throw "Local and remote HEAD must be the same full commit SHA."
+    throw "Local HEAD must match origin/$ExpectedRemoteBranch exactly."
 }
 if (-not [string]::IsNullOrWhiteSpace($DirtyState)) { throw "Uncommitted changes exist; no preflight or packaging writes allowed." }
 
