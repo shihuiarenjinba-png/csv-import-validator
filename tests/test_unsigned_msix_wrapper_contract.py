@@ -49,6 +49,18 @@ class BuilderSourceSafetyTests(unittest.TestCase):
         self.assertNotIn("SignTool.exe", text)
         self.assertNotIn("New-SelfSignedCertificate", text)
 
+    def test_qa_only_branch_is_never_allowed_for_formal_build(self):
+        text = self.script
+        self.assertIn('"codex/dca-per-user-qa-current-20261128"', text)
+        self.assertIn('if ($QaUnsigned)', text)
+        self.assertIn('if ($Branch -notin $AllowedBranches)', text)
+
+    def test_workflow_runs_source_gui_and_test_signed_derivative_only(self):
+        self.assertIn("scripts/local_real_device_qa.py", self.workflow)
+        self.assertIn("store/qa_test_sign_install.ps1", self.workflow)
+        self.assertIn("FIXED_1_0_0_0_PACKAGE_UNCHANGED=TRUE", self.workflow)
+        self.assertIn("WINDOWS_10_11_VISUAL_DPI=NOT_RUN", self.workflow)
+
     def test_workflow_never_builds_when_gate_reports_hold(self):
         self.assertIn("ready == 'true'", self.workflow)
         self.assertIn("store/build-msix.ps1", self.workflow)
