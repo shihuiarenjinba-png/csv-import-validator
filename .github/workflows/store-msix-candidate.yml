@@ -241,6 +241,12 @@ jobs:
           repository: shihuiarenjinba-png/Windows-all-auto
           ref: 7aeeaa445fb3d7a862d1bd5d41d3885be9e5dcdb
           path: _shared-windows-all-auto
+      - name: Move shared helper outside the clean product source tree
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:RUNNER_TEMP 'windows-all-auto-qa-helper'
+          if (Test-Path -LiteralPath $helper) { throw 'Refusing to overwrite an existing helper checkout.' }
+          Move-Item -LiteralPath '_shared-windows-all-auto' -Destination $helper
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -276,7 +282,8 @@ jobs:
           if ($actual -cne ([string]$build.msix_sha256).ToLowerInvariant()) { throw 'Candidate SHA differs from builder evidence.' }
           $product = Get-Content -LiteralPath 'store/product.json' -Raw | ConvertFrom-Json
           $qaOut = Join-Path $env:RUNNER_TEMP 'dca-provisional-1-0-1-msix-qa'
-          & .\_shared-windows-all-auto\scripts\test_sign_msix_copy.ps1 -Package $candidate.FullName -ExpectedSha256 $build.msix_sha256 -IdentityName 'OkinawaDesktopTools.DataContractAuditor' -Publisher 'CN=46263F21-A700-41DB-8C9B-114C22FB82FC' -Version '1.0.1.0' -Architecture x64 -ApplicationId $product.appId -LaunchMode ProcessLaunch -OperationTimeoutSeconds 300 -OutputDirectory $qaOut
+          $sharedHelper = Join-Path $env:RUNNER_TEMP 'windows-all-auto-qa-helper'
+          & (Join-Path $sharedHelper 'scripts\test_sign_msix_copy.ps1') -Package $candidate.FullName -ExpectedSha256 $build.msix_sha256 -IdentityName 'OkinawaDesktopTools.DataContractAuditor' -Publisher 'CN=46263F21-A700-41DB-8C9B-114C22FB82FC' -Version '1.0.1.0' -Architecture x64 -ApplicationId $product.appId -LaunchMode ProcessLaunch -OperationTimeoutSeconds 300 -OutputDirectory $qaOut
           if ($LASTEXITCODE -ne 0) { throw "Candidate derivative install/launch failed: $LASTEXITCODE" }
           $evidenceRoot = Join-Path $PWD 'store-output\qa-evidence\provisional-1.0.1.0\test-sign-install'
           New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null

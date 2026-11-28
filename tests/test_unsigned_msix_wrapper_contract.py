@@ -47,6 +47,8 @@ class BuilderSourceSafetyTests(unittest.TestCase):
         self.assertIn("ref: 7aeeaa445fb3d7a862d1bd5d41d3885be9e5dcdb", self.workflow)
         self.assertIn("test_sign_msix_copy.ps1", self.workflow)
         self.assertIn("PROVISIONAL_NOT_OWNER_APPROVED", self.workflow)
+        self.assertIn("Move shared helper outside the clean product source tree", self.workflow)
+        self.assertIn("windows-all-auto-qa-helper", self.workflow)
         self.assertIn("data-contract-provisional-not-approved-1.0.1.0", self.workflow)
         self.assertIn("windows-all-auto", self.workflow)
         self.assertNotIn("Submit for certification", self.workflow)
