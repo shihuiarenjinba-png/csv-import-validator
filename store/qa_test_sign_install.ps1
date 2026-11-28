@@ -63,6 +63,7 @@ try {
     }
     if ($identity.GetAttribute('ProcessorArchitecture') -cne 'x64') { throw 'Test package architecture is not x64.' }
 
+    Write-Host "DCA_QA_PHASE=PREPARE_TEST_SIGNED_COPY"
     Copy-Item -LiteralPath $PackagePath -Destination $signedPath
     $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject $ExpectedPublisher `
         -CertStoreLocation Cert:\CurrentUser\My -KeyAlgorithm RSA -KeyLength 2048 `
@@ -73,16 +74,20 @@ try {
     Export-Certificate -Cert $cert -FilePath $cerPath | Out-Null
     Import-Certificate -FilePath $cerPath -CertStoreLocation Cert:\CurrentUser\TrustedPeople | Out-Null
     Import-Certificate -FilePath $cerPath -CertStoreLocation Cert:\CurrentUser\Root | Out-Null
+    Write-Host "DCA_QA_PHASE=TEST_CERTIFICATE_READY"
 
     $sdkRoot = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
     $signTool = Get-ChildItem -LiteralPath $sdkRoot -Filter signtool.exe -Recurse -File |
         Where-Object { $_.DirectoryName -match '\\x64$' } | Sort-Object FullName -Descending | Select-Object -First 1
     if (-not $signTool) { throw 'Windows SDK x64 signtool.exe is unavailable on the runner.' }
+    Write-Host "DCA_QA_PHASE=SIGNING_DERIVATIVE"
     & $signTool.FullName sign /fd SHA256 /f $pfxPath /p $testPassword $signedPath
     if ($LASTEXITCODE -ne 0) { throw "Test signing failed with exit code $LASTEXITCODE." }
+    Write-Host "DCA_QA_PHASE=VERIFYING_SIGNATURE"
     & $signTool.FullName verify /pa /v $signedPath
     if ($LASTEXITCODE -ne 0) { throw "Signed-copy verification failed with exit code $LASTEXITCODE." }
 
+    Write-Host "DCA_QA_PHASE=VERIFYING_NON_SIGNATURE_PAYLOAD"
     $signedHashes = Get-ZipHashes $signedPath
     $sourceNames = @($sourceHashes.Keys | Sort-Object)
     $signedNames = @($signedHashes.Keys | Sort-Object)
@@ -108,13 +113,16 @@ try {
     $existing = @(Get-AppxPackage -Name $ExpectedIdentity -ErrorAction SilentlyContinue)
     if ($existing.Count -gt 0) { throw 'Unexpected pre-existing package identity on the supposedly ephemeral runner.' }
     $installAttempted = $true
+    Write-Host "DCA_QA_PHASE=INSTALLING_TEST_DERIVATIVE"
     Add-AppxPackage -Path $signedPath -ErrorAction Stop
     $installed = Get-AppxPackage -Name $ExpectedIdentity -ErrorAction Stop | Select-Object -First 1
     $appPackageFullName = $installed.PackageFullName
     $installStatus = 'PASS'
+    Write-Host "DCA_QA_PHASE=INSTALL_PASS"
     if ($installed.Publisher -cne $ExpectedPublisher) { throw 'Installed package Publisher mismatch.' }
 
     $appUserModelId = $installed.PackageFamilyName + '!' + $application.GetAttribute('Id')
+    Write-Host "DCA_QA_PHASE=LAUNCHING_AUMID"
     Start-Process -FilePath explorer.exe -ArgumentList ("shell:AppsFolder\" + $appUserModelId)
     $exeName = [IO.Path]::GetFileNameWithoutExtension($application.GetAttribute('Executable').Split('\')[-1])
     $deadline = (Get-Date).AddSeconds(45)
