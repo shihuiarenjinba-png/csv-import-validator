@@ -152,7 +152,8 @@ jobs:
 
   build-unsigned-candidate:
     needs: regression-preflight
-    if: needs.regression-preflight.outputs.ready == 'true'
+    # A pull request may run QA but must not build a Store candidate. Candidate builds only run on the canonical formal branch.
+    if: needs.regression-preflight.outputs.ready == 'true' && github.ref == 'refs/heads/codex/store-p0-data-contract-20261023'
     runs-on: windows-latest
     steps:
       - name: Checkout dedicated work branch
