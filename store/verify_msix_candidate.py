@@ -117,7 +117,7 @@ def verify_msix(root: Path, msix: Path, version: str | None = None, *, provision
             "filename": msix.name,
             "size_bytes": msix.stat().st_size,
             "sha256": digest.hexdigest(),
-            "signature_status": "QA_UNSIGNED_EXPECTED",
+            "signature_status": "UNSIGNED_STORE_CANDIDATE" if provisional else "QA_UNSIGNED_EXPECTED",
         }
     blockers = list(dict.fromkeys(blockers))
     result = {

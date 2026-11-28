@@ -200,6 +200,7 @@ class StoreGateTests(unittest.TestCase):
         self.assertTrue(result["valid"], result["blockers"])
         self.assertEqual(result["version"], "1.0.1.0")
         self.assertEqual(result["candidate_status"], "PROVISIONAL_NOT_OWNER_APPROVED")
+        self.assertEqual(result["msix"]["signature_status"], "UNSIGNED_STORE_CANDIDATE")
         self.assertFalse(result["owner_version_approved"])
         self.assertFalse(result["upload_approved"])
         record = json.loads((self.root / "store" / "partner_center_registration.json").read_text(encoding="utf-8"))
