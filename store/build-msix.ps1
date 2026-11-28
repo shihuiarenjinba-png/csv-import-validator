@@ -97,10 +97,10 @@ if ($ProvisionalCandidate) {
     if ($unexpectedBlockers.Count -gt 0) { throw ('Provisional candidate preflight has non-version blockers: ' + ($unexpectedBlockers -join '; ')) }
     $Report.blockers = @()
     $Report.ready = $true
-    $Report.candidate_status = 'PROVISIONAL_NOT_OWNER_APPROVED'
-    $Report.owner_version_approval = $false
-    $Report.formal_adoption_allowed = $false
-    $Report.upload_approved = $false
+    $Report | Add-Member -NotePropertyName candidate_status -NotePropertyValue 'PROVISIONAL_NOT_OWNER_APPROVED' -Force
+    $Report | Add-Member -NotePropertyName owner_version_approval -NotePropertyValue $false -Force
+    $Report | Add-Member -NotePropertyName formal_adoption_allowed -NotePropertyValue $false -Force
+    $Report | Add-Member -NotePropertyName upload_approved -NotePropertyValue $false -Force
     $Report.version_to_build = $Version
 } else {
     $Report.ready = (@($Report.blockers).Count -eq 0)
